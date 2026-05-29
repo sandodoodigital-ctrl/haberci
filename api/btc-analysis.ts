@@ -17,7 +17,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     
    const marketStructure = rsi > 55 
   ? '📈 Hacimli Market Yapısı - Alıcı likiditesi yoğun.' 
-  : '减 Hacimsiz Market Yapısı - Yatay konsolidasyon ve hacim eksikliği.';
+  : '📉 Hacimsiz Market Yapısı - Yatay konsolidasyon ve hacim eksikliği.';
 
     const trendInterpretation = rsi > 50 ? 'Boğa Ağırlıklı (Bullish)' : 'Ayı Ağırlıklı (Bearish)';
 
