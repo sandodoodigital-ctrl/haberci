@@ -15,9 +15,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const support = Math.round(price * 0.975);
     const resistance = Math.round(price * 1.022);
     
-    const marketStructure = rsi > 55 
-      ? '📈 Hacimli Market Yapısı - Alıcı likiditesi yoğun.' 
-      : '📉 Hacimsiz Market Yapısı - Yatay konsolidasyon ve hacim eksikliği.';
+   const marketStructure = rsi > 55 
+  ? '📈 Hacimli Market Yapısı - Alıcı likiditesi yoğun.' 
+  : '减 Hacimsiz Market Yapısı - Yatay konsolidasyon ve hacim eksikliği.';
 
     const trendInterpretation = rsi > 50 ? 'Boğa Ağırlıklı (Bullish)' : 'Ayı Ağırlıklı (Bearish)';
 
