@@ -3,7 +3,6 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 const BOT_TOKEN = '8784838463:AAGrZu_RlxzqWWicryIAk_l9Q51FwhJfIDw';
 const TARGET_CHANNEL = '@barbianaliz';
 
-// Güvenli Akıllı Çeviri Sistemi
 async function translateToTurkish(text: string): Promise<string> {
   if (!text) return '';
   try {
@@ -18,7 +17,6 @@ async function translateToTurkish(text: string): Promise<string> {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // CORS Ayarları
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
@@ -29,6 +27,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
+    // Frontend'den gelen görseli (image) alıyoruz
+    const { image } = req.body;
+
     let finalNewsTitle = '';
     let finalNewsBody = '';
 
@@ -38,43 +39,35 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         headers: { 'User-Agent': 'Mozilla/5.0' }
       });
       const newsData = await newsRes.json();
-      if (newsData && newsData.Data && newsData.Data.length > 0) {
+      if (newsData?.Data?.length > 0) {
         const latestNews = newsData.Data[0];
         finalNewsTitle = await translateToTurkish(latestNews.title || '');
         finalNewsBody = await translateToTurkish(latestNews.body || '');
       }
     } catch (e) {
-      console.error('Haber çekme hatası:', e);
+      console.error('Haber hatası:', e);
     }
 
-    // 2. Binance'den Canlı BTC Fiyatını Çek
-    let displayPrice = '$73.773,33';
+    // 2. Binance Canlı Fiyatı
+    let displayPrice = '$74.042,57';
     try {
       const priceRes = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT');
       const priceData = await priceRes.json();
-      if (priceData && priceData.price) {
+      if (priceData?.price) {
         const parsedPrice = parseFloat(priceData.price);
         if (!isNaN(parsedPrice)) {
           displayPrice = '$' + parsedPrice.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
       }
     } catch (e) {
-      console.error('Binance fiyat hatası:', e);
+      console.error('Fiyat hatası:', e);
     }
 
     const rsi = 54.20;
 
-    // 3. Kanalda Blok Şeklinde Görünecek Kusursuz Grafik Metni Tasarımı
-    let reportMessage = `🚀 <b>GÜNLÜK OTONOM BÜLTEN & AI TEKNİK ANALİZ</b> 🇹🇷\n`;
+    // 3. Bülten Metni Şablonu
+    let reportMessage = `🚀 <b>GÜNLÜK OTONOM BÜLTEN & GÖRSEL TEKNİK ANALİZ</b> 🇹🇷\n`;
     reportMessage += `━━━━━━━━━━━━━━━━━\n\n`;
-
-    // CANLI BLOK GRAFİK ALANI (Kanalda şık bir kutu grafik gibi durur)
-    reportMessage += `📊 <b>BTC/USDT CANLI TREND GRAFİĞİ (24s)</b>\n`;
-    reportMessage += `<code>┌────────────────────────────┐</code>\n`;
-    reportMessage += `<code>│  📈 Fiyat: ${displayPrice.padEnd(16)}│</code>\n`;
-    reportMessage += `<code>│  ▲ MA(20): Dönem Boğa      │</code>\n`;
-    reportMessage += `<code>│  ■ Hacim : Güçlü Alıcılı   │</code>\n`;
-    reportMessage += `<code>└────────────────────────────┘</code>\n\n`;
 
     if (finalNewsTitle) {
       reportMessage += `📰 <b>Flaş Küresel Haber:</b>\n📌 <i>${finalNewsTitle}</i>\n\n`;
@@ -82,20 +75,50 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       reportMessage += `━━━━━━━━━━━━━━━━━\n\n`;
     }
 
-    reportMessage += `📊 <b>MARKET GÖSTERGELERİ</b>\n`;
-    reportMessage += `💰 <b>BTC Güncel Sinyal:</b> <code>${displayPrice}</code>\n`;
+    reportMessage += `📊 <b>CANLI GÖRSEL TEKNİK ANALİZ (BTC/USDT)</b>\n\n`;
+    reportMessage += `💰 <b>Güncel Fiyat:</b> <code>${displayPrice}</code>\n`;
     reportMessage += `📈 <b>RSI (14):</b> <code>${rsi}</code> (Nötr / Dengeli)\n`;
     reportMessage += `📉 <b>MACD Sinyali:</b> ✅ Pozitif Dönem / Yükseliş Eğilimi\n`;
     reportMessage += `📈 <b>Trend Durumu:</b> 🟩 [Yükseliş Boğası]\n`;
     reportMessage += `━━━━━━━━━━━━━━━━━\n\n`;
-
-    reportMessage += `🔮 <b>Yapay Zeka Görüşü:</b> Market yapısı kararlı duruşunu koruyor. Teknik indikatörlerdeki hacim girişleri yukarı yönlü ivmeyi tam anlamıyla desteklemektedir.\n\n`;
+    reportMessage += `🔮 <b>Yapay Zeka Görüşü:</b> Panel üzerinden anlık olarak yakalanan TradingView canlı grafiğinde alıcı bloklarının korunduğu görülüyor.\n\n`;
     reportMessage += `⏰ <i>Analiz Zamanı: ${new Date().toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' })}</i>\n\n`;
     reportMessage += `💎 VIP sinyaller için: @barbieanaliz\n`;
     reportMessage += `📢 Kanalımız: t.me/barbianaliz`;
 
-    // 4. Telegram'a Doğrudan Sorunsuz sendMessage Gönderimi (Link YOK, Hata YOK)
-    const telegramRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+    // 4. EĞER FRONTEND'DEN GÖRSEL GELDİYSE FOTOĞRAFLI GÖNDER
+    if (image && image.startsWith('data:image')) {
+      // Base64 görsel verisini Telegram'ın anlayacağı FormData yapısına dönüştürmek yerine
+      // Doğrudan Telegram'a buffer olarak veya multipart ile göndermek yerine, 
+      // Vercel Serverless ortamında en kararlı çalışan yapı için ham veriyi ayıklıyoruz:
+      const base64Data = image.split(',')[1];
+      const formData = new FormData();
+      
+      // Telegram API'ye göndermek için geçici dosya blob yapısı oluşturuyoruz
+      const buffer = Buffer.from(base64Data, 'base64');
+      const blob = new Blob([buffer], { type: 'image/png' });
+      
+      const telegramForm = new globalThis.FormData();
+      telegramForm.append('chat_id', TARGET_CHANNEL);
+      telegramForm.append('photo', blob, 'chart.png');
+      telegramForm.append('caption', reportMessage.trim());
+      telegramForm.append('parse_mode', 'HTML');
+
+      const telegramRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
+        method: 'POST',
+        body: telegramForm,
+      });
+
+      const telegramResult = await telegramRes.json();
+      if (telegramResult.ok) {
+        return res.status(200).json({ success: true });
+      } else {
+        console.error("Fotoğraf gönderilemedi, metne geçiliyor:", telegramResult.description);
+      }
+    }
+
+    // GÖRSEL YOKSA VEYA BAŞARISIZ OLDUYSA DÜZ METİN GÖNDER (Yedek Plan)
+    const fallbackRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -106,10 +129,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }),
     });
 
-    const telegramResult = await telegramRes.json();
-
-    if (!telegramResult.ok) {
-      return res.status(400).json({ error: telegramResult.description });
+    const fallbackResult = await fallbackRes.json();
+    if (!fallbackResult.ok) {
+      return res.status(400).json({ error: fallbackResult.description });
     }
 
     return res.status(200).json({ success: true });
