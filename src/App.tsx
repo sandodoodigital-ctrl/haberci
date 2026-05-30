@@ -55,7 +55,7 @@ function App() {
       let finalNewsTitle = '';
       let finalNewsBody = '';
 
-      // 1. Küresel Haberi Çek ve Çevir
+      // 1. Küresel Kripto Haberini Çek ve Çevir
       try {
         const newsRes = await fetch('https://min-api.cryptocompare.com/data/v2/news/?lang=EN');
         const newsData = await newsRes.json();
@@ -68,14 +68,15 @@ function App() {
         console.error('Haber çekilemedi:', e);
       }
 
-      const currentPrice = btcData?.price || 73906;
+      const currentPrice = btcData?.price || 73964;
       const rsi = 54.20;
 
-      // 2. TradingView Resmi Grafik Görsel Linki (Temiz PNG formatı tetikler)
-      const chartImageUrl = `https://s3.tradingview.com/snapshots/b/BINANCE:BTCUSDT.png`;
+      // 2. Tıpkı "Görüntüyü Kopyala" Mantığı Gibi Çalışan Canlı TradingView Resim API Linki
+      // Bu link Telegram tarafından doğrudan bir resim dosyası olarak algılanır.
+      const liveChartImageUrl = `https://charts-api.tradingview.com/v1/charts/image?symbol=BINANCE:BTCUSDT&interval=D&theme=dark&style=1&timezone=Europe/Istanbul`;
 
-      // 3. Şık Metin İçeriğini Oluştur (En tepeye görünmez linki çakıyoruz)
-      let reportMessage = `<a href="${chartImageUrl}">&#8205;</a>`; // İşte Telegram'ın resmi üstte göstermesini sağlayan sihirli kod!
+      // 3. Şık Metin İçeriğini Hazırla (En tepeye resmi çekecek gizli kod yerleştirildi)
+      let reportMessage = `<a href="${liveChartImageUrl}">&#8205;</a>`; 
       reportMessage += `🚀 <b>GÜNLÜK OTONOM BÜLTEN & GÖRSEL ANALİZ</b> 🇹🇷\n`;
       reportMessage += `━━━━━━━━━━━━━━━━━\n\n`;
 
@@ -85,7 +86,7 @@ function App() {
         reportMessage += `━━━━━━━━━━━━━━━━━\n\n`;
       }
 
-      reportMessage += ` Bars <b>CANLI TEKNİK ANALİZ (BTC/USDT)</b>\n\n`;
+      reportMessage += `📊 <b>CANLI TEKNİK ANALİZ (BTC/USDT)</b>\n\n`;
       reportMessage += `💰 <b>Güncel Fiyat:</b> $${currentPrice.toLocaleString('tr-TR')}\n`;
       reportMessage += `📈 <b>RSI (14):</b> <code>${rsi}</code> (Nötr / Dengeli)\n`;
       reportMessage += `📉 <b>MACD Sinyali:</b> ✅ Pozitif Dönem / Yükseliş Eğilimi\n`;
@@ -96,7 +97,7 @@ function App() {
       reportMessage += `💎 VIP sinyaller için: @barbieanaliz\n`;
       reportMessage += `📢 Kanalımız: t.me/barbianaliz`;
 
-      // 4. Doğrudan Telegram API'sine sendMessage (HTML) olarak gönderiyoruz
+      // 4. Telegram API'sine sendMessage olarak gönderip, link önizlemesinden resmi en üstte gösteriyoruz
       const telegramRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -104,7 +105,7 @@ function App() {
           chat_id: TARGET_CHANNEL,
           text: reportMessage.trim(),
           parse_mode: 'HTML',
-          disable_web_page_preview: false // Resim önizlemesi açık olmalı ki grafik görünsün
+          disable_web_page_preview: false // Resim önizlemesinin gelmesi için burası kesinlikle false olmalı!
         }),
       });
 
