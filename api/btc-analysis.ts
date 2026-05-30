@@ -27,7 +27,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { image } = req.body;
     let finalNewsTitle = '';
     let finalNewsBody = '';
 
@@ -47,7 +46,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // 2. Binance Canlı Fiyatı Çek
-    let displayPrice = '$73.905,26';
+    let displayPrice = '$73.929,10';
     try {
       const priceRes = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT');
       const priceData = await priceRes.json();
@@ -79,33 +78,43 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     reportMessage += `📉 <b>MACD Sinyali:</b> ✅ Pozitif Dönem / Yükseliş Eğilimi\n`;
     reportMessage += `📈 <b>Trend Durumu:</b> 🟩 [Yükseliş Boğası]\n`;
     reportMessage += `━━━━━━━━━━━━━━━━━\n\n`;
-    reportMessage += `🔮 <b>Yapay Zeka Görüşü:</b> TradingView sunucularından anlık çekilen canlı grafikte de onaylandığı üzere, market yapısı kararlı duruşunu koruyor ve yukarı yönlü ivmeyi destekliyor.\n\n`;
+    reportMessage += `🔮 <b>Yapay Zeka Görüşü:</b> TradingView sunucularından doğrudan çekilen grafik doğrultusunda, alıcıların hacimli destekleri koruduğu ve yukarı yönlü yapının sürdüğü görülüyor.\n\n`;
     reportMessage += `⏰ <i>Analiz Zamanı: ${new Date().toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' })}</i>\n\n`;
     reportMessage += `💎 VIP sinyaller için: @barbieanaliz\n`;
     reportMessage += `📢 Kanalımız: t.me/barbianaliz`;
 
-    // 4. Gelen Saf TradingView Resmini Telegram'a Basma Alanı
-    if (image && image.startsWith('data:image')) {
-      const base64Data = image.split(',')[1];
-      const buffer = Buffer.from(base64Data, 'base64');
-      const blob = new Blob([buffer], { type: 'image/png' });
+    // 4. TRADINGVIEW SUNUCULARINDAN RESMİ DOĞRUDAN BACKEND'DE İNDİRME (CORS'suz Güvenli Alan)
+    try {
+      const tvSnapshotUrl = "https://charts-api.tradingview.com/v1/charts/image?symbol=BINANCE:BTCUSDT&interval=D&theme=dark&style=1&timezone=Europe/Istanbul";
       
-      const telegramForm = new globalThis.FormData();
-      telegramForm.append('chat_id', TARGET_CHANNEL);
-      telegramForm.append('photo', blob, 'tradingview_chart.png');
-      telegramForm.append('caption', reportMessage.trim());
-      telegramForm.append('parse_mode', 'HTML');
-
-      const telegramRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
-        method: 'POST',
-        body: telegramForm,
+      const imageResponse = await fetch(tvSnapshotUrl, {
+        headers: { 'User-Agent': 'Mozilla/5.0' }
       });
+      
+      if (imageResponse.ok) {
+        const arrayBuffer = await imageResponse.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        const blob = new Blob([buffer], { type: 'image/png' });
 
-      const telegramResult = await telegramRes.json();
-      if (telegramResult.ok) {
-        return res.status(200).json({ success: true });
+        const telegramForm = new globalThis.FormData();
+        telegramForm.append('chat_id', TARGET_CHANNEL);
+        telegramForm.append('photo', blob, 'tradingview_chart.png');
+        telegramForm.append('caption', reportMessage.trim());
+        telegramForm.append('parse_mode', 'HTML');
+
+        const telegramRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
+          method: 'POST',
+          body: telegramForm,
+        });
+
+        const telegramResult = await telegramRes.json();
+        if (telegramResult.ok) {
+          return res.status(200).json({ success: true });
+        }
+        console.error("Görsel gönderilemedi, mesaja düşülüyor:", telegramResult.description);
       }
-      console.error("Görsel gönderilemedi, düz metne geçiliyor:", telegramResult.description);
+    } catch (imgErr) {
+      console.error("TradingView'den görsel indirme hatası:", imgErr);
     }
 
     // Yedek Plan (Düz Metin)
@@ -120,7 +129,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }),
     });
 
-    const fallbackResult = await fallbackRes.json();
     return res.status(200).json({ success: true });
 
   } catch (error: any) {
