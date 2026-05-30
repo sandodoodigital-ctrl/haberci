@@ -48,7 +48,6 @@ function App() {
     fetchData();
   }, [fetchData]);
 
-  // Butona basıldığında doğrudan tarayıcıdan Telegram'a resimli bülten gönderen fonksiyon
   const handleManualTrigger = async () => {
     setSending(true);
     setSent(false);
@@ -69,12 +68,15 @@ function App() {
         console.error('Haber çekilemedi:', e);
       }
 
-      // 2. Güncel Fiyatı Al
-      const currentPrice = btcData?.price || 73910;
+      const currentPrice = btcData?.price || 73906;
       const rsi = 54.20;
 
-      // 3. Şık Metin İçeriğini Oluştur
-      let reportMessage = `🚀 <b>GÜNLÜK OTONOM BÜLTEN & GÖRSEL ANALİZ</b> 🇹🇷\n`;
+      // 2. TradingView Resmi Grafik Görsel Linki (Temiz PNG formatı tetikler)
+      const chartImageUrl = `https://s3.tradingview.com/snapshots/b/BINANCE:BTCUSDT.png`;
+
+      // 3. Şık Metin İçeriğini Oluştur (En tepeye görünmez linki çakıyoruz)
+      let reportMessage = `<a href="${chartImageUrl}">&#8205;</a>`; // İşte Telegram'ın resmi üstte göstermesini sağlayan sihirli kod!
+      reportMessage += `🚀 <b>GÜNLÜK OTONOM BÜLTEN & GÖRSEL ANALİZ</b> 🇹🇷\n`;
       reportMessage += `━━━━━━━━━━━━━━━━━\n\n`;
 
       if (finalNewsTitle) {
@@ -83,29 +85,26 @@ function App() {
         reportMessage += `━━━━━━━━━━━━━━━━━\n\n`;
       }
 
-      reportMessage += `📊 <b>CANLI TEKNİK ANALİZ (BTC/USDT)</b>\n\n`;
+      reportMessage += ` Bars <b>CANLI TEKNİK ANALİZ (BTC/USDT)</b>\n\n`;
       reportMessage += `💰 <b>Güncel Fiyat:</b> $${currentPrice.toLocaleString('tr-TR')}\n`;
       reportMessage += `📈 <b>RSI (14):</b> <code>${rsi}</code> (Nötr / Dengeli)\n`;
       reportMessage += `📉 <b>MACD Sinyali:</b> ✅ Pozitif Dönem / Yükseliş Eğilimi\n`;
       reportMessage += `📈 <b>Trend Durumu:</b> [Yükseliş Boğası]\n`;
       reportMessage += `━━━━━━━━━━━━━━━━━\n\n`;
-      reportMessage += `🔮 <b>Yapay Zeka Görüşü:</b> Market yapısı kararlı duruşunu koruyor. Yukarıdaki TradingView canlı tablosunda belirtilen hacim girişleri yukarı yönlü ivmeyi destekliyor.\n\n`;
+      reportMessage += `🔮 <b>Yapay Zeka Görüşü:</b> Market yapısı kararlı duruşunu koruyor. Yukarıdaki TradingView canlı grafiğinde belirtilen hacim girişleri yukarı yönlü ivmeyi destekliyor.\n\n`;
       reportMessage += `⏰ <i>Analiz Zamanı: ${new Date().toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' })}</i>\n\n`;
       reportMessage += `💎 VIP sinyaller için: @barbieanaliz\n`;
       reportMessage += `📢 Kanalımız: t.me/barbianaliz`;
 
-      // 4. TradingView Canlı Grafik Resmini Hazırla
-      const chartImageUrl = `https://v1.charts.tradingview.com/chart?symbol=BINANCE:BTCUSDT&interval=D&theme=dark&style=1&timezone=Europe/Istanbul&width=1280&height=720`;
-
-      // 5. Doğrudan Telegram API'sine Fotoğraflı Gönderim Yap
-      const telegramRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
+      // 4. Doğrudan Telegram API'sine sendMessage (HTML) olarak gönderiyoruz
+      const telegramRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           chat_id: TARGET_CHANNEL,
-          photo: chartImageUrl,
-          caption: reportMessage.trim(),
+          text: reportMessage.trim(),
           parse_mode: 'HTML',
+          disable_web_page_preview: false // Resim önizlemesi açık olmalı ki grafik görünsün
         }),
       });
 
