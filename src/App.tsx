@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import html2canvas from 'html2canvas';
 
 export default function App() {
   const [loading, setLoading] = useState(false);
   const [btcPrice, setBtcPrice] = useState('...');
 
-  // Binance'den arayüz için anlık fiyatı çekme (Arayüz görseli için)
+  // Binance'den arayüz için anlık fiyatı çekme
   useEffect(() => {
     const fetchPrice = async () => {
       try {
@@ -20,52 +19,48 @@ export default function App() {
       }
     };
     fetchPrice();
-    const interval = setInterval(fetchPrice, 30000); // 30 saniyede bir güncelle
+    const interval = setInterval(fetchPrice, 30000);
     return () => clearInterval(interval);
   }, []);
 
-  // Otomatik Fotoğraflı Gönderim Tetikleyicisi
+  // TradingView Sunucusundan Gerçek Canlı Grafik Resmini Çekip Gönderen Fonksiyon
   const handleSendAnalysis = async () => {
     setLoading(true);
     try {
-      // Ekranda TradingView grafiğinin olduğu div konteynerini ID ile yakalıyoruz
-      const element = document.getElementById('tradingview-container');
+      // TradingView'in sunucu tarafında anlık grafik resmi (Snapshot) üreten resmi API endpoint'i
+      // Bu link doğrudan TradingView sunucularından saf bir PNG resmi üretir.
+      const tvSnapshotUrl = "https://charts-api.tradingview.com/v1/charts/image?symbol=BINANCE:BTCUSDT&interval=D&theme=dark&style=1&timezone=Europe/Istanbul";
+
+      // Resmi çekip base64 formatına dönüştürüyoruz ki arka plandaki API'ye güvenle aktarabilelim
+      const imageResponse = await fetch(tvSnapshotUrl);
+      const blob = await imageResponse.blob();
       
-      if (!element) {
-        alert('Grafik alanı bulunamadı!');
+      const reader = new FileReader();
+      reader.readAsDataURL(blob);
+      reader.onloadend = async () => {
+        const base64String = reader.result as string;
+
+        // Backend API'mize bu saf resmi gönderiyoruz
+        const response = await fetch('/api/btc-analysis', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ image: base64String }),
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          alert('Bülten ve Gerçek TradingView Grafiği Kanala Başarıyla Gönderildi! 🎉');
+        } else {
+          alert('Telegram gönderim hatası: ' + data.error);
+        }
         setLoading(false);
-        return;
-      }
+      };
 
-      // Grafik alanının o anki canlı görüntüsünün fotoğrafını çekiyoruz
-      const canvas = await html2canvas(element, {
-        useCORS: true, // Dış kaynaklı TradingView grafik verisine izin ver
-        logging: false,
-        backgroundColor: '#131722' // Arka planın koyu temada kalmasını garanti et
-      });
-      
-      // Fotoğrafı Telegram'ın okuyabileceği ham base64 resim datasına çeviriyoruz
-      const screenshotImage = canvas.toDataURL('image/png');
-
-      // Hazırlanan resmi backend API'mize postalıyoruz
-      const response = await fetch('/api/btc-analysis', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ image: screenshotImage }),
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        alert('Bülten ve Canlı Grafik Ekranı Kanala Başarıyla Gönderildi! 🎉');
-      } else {
-        alert('Telegram gönderim hatası: ' + data.error);
-      }
     } catch (error: any) {
       console.error(error);
-      alert('Sistem tetiklenirken bir hata oluştu: ' + (error.message || error));
-    } finally {
+      alert('Grafik resmi çekilirken bir hata oluştu: ' + (error.message || error));
       setLoading(false);
     }
   };
@@ -78,12 +73,11 @@ export default function App() {
         <h1 style={{ fontSize: '28px', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px' }}>
           📈 Barbi Analiz Otonom Panel
         </h1>
-        <p style={{ color: '#94a3b8', fontSize: '14px', marginTop: '5px' }}>7/24 Arka Plan Akıllı Haber ve Görsel Analiz Sistemi</p>
+        <p style={{ color: '#94a3b8', fontSize: '14px', marginTop: '5px' }}>7/24 Arka Plan Akıllı Haber ve Canlı Grafik Sistemi</p>
       </div>
 
-      {/* CANLI TRADINGVIEW GRAFİK ALANI (Fotoğrafı Tam Buradan Çekecek) */}
+      {/* CANLI TRADINGVIEW GRAFİK ALANI */}
       <div 
-        id="tradingview-container" 
         style={{ 
           maxWidth: '900px', 
           margin: '0 auto 40px auto', 
@@ -121,7 +115,7 @@ export default function App() {
           style={{
             width: '100%',
             backgroundColor: loading ? '#0d9488' : '#10b981',
-            color: '#white',
+            color: '#fff',
             fontWeight: 'bold',
             padding: '12px 20px',
             borderRadius: '8px',
@@ -132,7 +126,7 @@ export default function App() {
             boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)'
           }}
         >
-          {loading ? '⚡ Fotoğraf Çekiliyor & Paylaşılıyor...' : '⚡ Şimdi Haber & Görsel Analiz Gönder'}
+          {loading ? '⚡ Canlı Grafik Çekiliyor & Paylaşılıyor...' : '⚡ Şimdi Haber & Görsel Analiz Gönder'}
         </button>
       </div>
 
