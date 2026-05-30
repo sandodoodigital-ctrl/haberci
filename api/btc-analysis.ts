@@ -17,6 +17,19 @@ async function translateToTurkish(text: string): Promise<string> {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // CORS ve İstek Metodu Ayarları (Buton hatasını çözen kısım)
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'X-CSRff-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+  );
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   try {
     let finalNewsTitle = '';
     let finalNewsBody = '';
@@ -63,28 +76,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       reportMessage += `━━━━━━━━━━━━━━━━━\n\n`;
     }
 
-    reportMessage += `📊 <b>CANLI GÖRSEL TEKNİK ANALİZ (BTC/USDT)</b>\n\n`;
+    reportMessage += `📊 <b>CANLI TEKNİK ANALİZ (BTC/USDT)</b>\n\n`;
     reportMessage += `💰 <b>Güncel Fiyat:</b> $${roundedPrice.toLocaleString('tr-TR')}\n`;
     reportMessage += `📈 <b>RSI (14):</b> <code>${rsi}</code> (Nötr / Dengeli)\n`;
     reportMessage += `📉 <b>MACD Sinyali:</b> ✅ Pozitif Dönem / Yükseliş Eğilimi\n`;
     reportMessage += `📈 <b>Trend Durumu:</b> [Yükseliş Boğası]\n`;
     reportMessage += `━━━━━━━━━━━━━━━━━\n\n`;
-    reportMessage += `🔮 <b>Yapay Zeka Görüşü:</b> Market yapısı kararlı duruşunu koruyor. Teknik tabloda belirtilen hacim girişleri yukarı yönlü ivmeyi destekliyor.\n\n`;
+    reportMessage += `🔮 <b>Yapay Zeka Görüşü:</b> Market yapısı kararlı duruşunu koruyor. Aşağıdaki TradingView canlı tablosunda belirtilen hacim girişleri yukarı yönlü ivmeyi destekliyor.\n\n`;
     reportMessage += `⏰ <i>Analiz Zamanı: ${new Date().toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' })}</i>\n\n`;
     reportMessage += `💎 VIP sinyaller için: @barbieanaliz\n`;
     reportMessage += `📢 Kanalımız: t.me/barbianaliz`;
 
-    // 4. ADIM: Canlı TradingView Grafik Resmini Oluştur (1280x720 Boyutunda)
+    // 4. ADIM: Canlı TradingView Grafik Resmini Oluştur (1280x720 Boyutunda Dark Tema)
     const chartImageUrl = `https://v1.charts.tradingview.com/chart?symbol=BINANCE:BTCUSDT&interval=D&theme=dark&style=1&timezone=Europe/Istanbul&width=1280&height=720`;
 
-    // 5. ADIM: Telegram'a Resimli Mesaj (sendPhoto) Olarak Fırlat
+    // 5. ADIM: Telegram'a Resimli Mesaj (sendPhoto) Olarak Gönder
     const telegramRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         chat_id: TARGET_CHANNEL,
-        photo: chartImageUrl, // Canlı grafik görüntüsü link olarak gidiyor
-        caption: reportMessage.trim(), // Metin, resmin altına jilet gibi yapışıyor
+        photo: chartImageUrl,
+        caption: reportMessage.trim(),
         parse_mode: 'HTML',
       }),
     });
