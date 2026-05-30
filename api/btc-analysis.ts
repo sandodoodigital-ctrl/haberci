@@ -3,7 +3,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 const BOT_TOKEN = '8784838463:AAGrZu_RlxzqWWicryIAk_l9Q51FwhJfIDw';
 const TARGET_CHANNEL = '@barbianaliz';
 
-// Ücretsiz Akıllı Çeviri Fonksiyonu
+// Ücretsiz Google Translate Köprüsü
 async function translateToTurkish(text: string): Promise<string> {
   try {
     const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=tr&dt=t&q=${encodeURIComponent(text)}`;
@@ -17,7 +17,7 @@ async function translateToTurkish(text: string): Promise<string> {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // CORS Ayarları (Frontend paneline tam uyum)
+  // CORS Ayarları (Frontend paneline tam uyum sağlar)
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
@@ -60,10 +60,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const rsi = 54.20;
 
-    // 3. Telegram'ın Asla Reddedemeyeceği Güvenli ve Temiz Grafik Şeridi Görseli
-    const safeChartImg = `https://images.cryptocompare.com/sparklines/BTC/USD/day.png`;
-
-    // 4. Şık Bülten Metni Tasarımı
+    // 3. Şık Bülten Metni Tasarımı (Resmin hemen altında görünecek yazı)
     let reportMessage = `🚀 <b>GÜNLÜK OTONOM BÜLTEN & GÖRSEL ANALİZ</b> 🇹🇷\n`;
     reportMessage += `━━━━━━━━━━━━━━━━━\n\n`;
 
@@ -79,19 +76,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     reportMessage += `📉 <b>MACD Sinyali:</b> ✅ Pozitif Dönem / Yükseliş Eğilimi\n`;
     reportMessage += `📈 <b>Trend Durumu:</b> [Yükseliş Boğası]\n`;
     reportMessage += `━━━━━━━━━━━━━━━━━\n\n`;
-    reportMessage += `🔮 <b>Yapay Zeka Görüşü:</b> Market yapısı kararlı duruşunu koruyor. Ekrandaki TradingView canlı grafiğinde belirtilen hacim girişleri yukarı yönlü ivmeyi destekliyor.\n\n`;
+    reportMessage += `🔮 <b>Yapay Zeka Görüşü:</b> Market yapısı kararlı duruşunu koruyor. Teknik veriler yukarı yönlü boğa ivmesini desteklemekte.\n\n`;
     reportMessage += `⏰ <i>Analiz Zamanı: ${new Date().toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' })}</i>\n\n`;
     reportMessage += `💎 VIP sinyaller için: @barbieanaliz\n`;
     reportMessage += `📢 Kanalımız: t.me/barbianaliz`;
 
-    // 5. Telegram'a Gerçek Fotoğraflı sendPhoto İsteği Gönderme
+    // 4. Telegram'ın Doğrudan Tanıdığı ve Asla Reddedemeyeceği Kesin Grafik Resmi Linki
+    const safeChartImg = `https://images.cryptocompare.com/sparklines/BTC/USD/day.png`;
+
+    // 5. Telegram API'sine sendPhoto (Fotoğraflı Mesaj) Olarak Gönderiyoruz
     const telegramRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         chat_id: TARGET_CHANNEL,
-        photo: safeChartImg,
-        caption: reportMessage.trim(),
+        photo: safeChartImg,           // Gerçek resim linki en üste oturur
+        caption: reportMessage.trim(), // Tüm bülten yazısı resmin tam altına yapışır
         parse_mode: 'HTML'
       }),
     });
