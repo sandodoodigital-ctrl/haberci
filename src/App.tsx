@@ -6,22 +6,6 @@ interface BTCDat {
   info: string;
 }
 
-const BOT_TOKEN = '8784838463:AAGrZu_RlxzqWWicryIAk_l9Q51FwhJfIDw';
-const TARGET_CHANNEL = '@barbianaliz';
-
-// Ücretsiz Google Translate Köprüsü
-async function translateToTurkish(text: string): Promise<string> {
-  try {
-    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=tr&dt=t&q=${encodeURIComponent(text)}`;
-    const res = await fetch(url);
-    const json = await res.json();
-    return json?.[0]?.map((item: any) => item[0]).join('') || text;
-  } catch (err) {
-    console.error('Çeviri hatası:', err);
-    return text;
-  }
-}
-
 function App() {
   const [loading, setLoading] = useState(true);
   const [btcData, setBtcData] = useState<BTCDat | null>(null);
@@ -39,7 +23,7 @@ function App() {
       });
     } catch (err) {
       console.error(err);
-    } finally {
+    } finalNewsTitle {
       setLoading(false);
     }
   }, []);
@@ -52,69 +36,15 @@ function App() {
     setSending(true);
     setSent(false);
     try {
-      let finalNewsTitle = '';
-      let finalNewsBody = '';
+      // Doğrudan backend API rotamızı tetikliyoruz, bütün resmi çekme ve TG'ye gönderme işini o yapıyor
+      const res = await fetch('/api/btc-analysis', { method: 'POST' });
+      const result = await res.json();
 
-      // 1. Küresel Kripto Haberini Çek ve Çevir
-      try {
-        const newsRes = await fetch('https://min-api.cryptocompare.com/data/v2/news/?lang=EN');
-        const newsData = await newsRes.json();
-        if (newsData?.Data?.length > 0) {
-          const latestNews = newsData.Data[0];
-          finalNewsTitle = await translateToTurkish(latestNews.title);
-          finalNewsBody = await translateToTurkish(latestNews.body);
-        }
-      } catch (e) {
-        console.error('Haber çekilemedi:', e);
-      }
-
-      const currentPrice = btcData?.price || 73964;
-      const rsi = 54.20;
-
-      // 2. TradingView Canlı Fotoğraf Çekme Mekanizması (Snapshot API)
-      // Tıpkı senin "Görüntüyü Kopyala" butonuna bastığın an oluşan o temiz grafiği yakalar.
-      const liveSnapshotUrl = `https://s3.tradingview.com/snapshots/b/BINANCE:BTCUSDT.png`;
-
-      // 3. Şık Metin İçeriğini Hazırla
-      let reportMessage = `🚀 <b>GÜNLÜK OTONOM BÜLTEN & GÖRSEL ANALİZ</b> 🇹🇷\n`;
-      reportMessage += `━━━━━━━━━━━━━━━━━\n\n`;
-
-      if (finalNewsTitle) {
-        reportMessage += `📰 <b>Flaş Küresel Haber:</b>\n📌 <i>${finalNewsTitle}</i>\n\n`;
-        reportMessage += `📝 <b>Haber Özeti:</b> ${finalNewsBody.slice(0, 250)}...\n\n`;
-        reportMessage += `━━━━━━━━━━━━━━━━━\n\n`;
-      }
-
-      reportMessage += `📊 <b>CANLI GÖRSEL TEKNİK ANALİZ (BTC/USDT)</b>\n\n`;
-      reportMessage += `💰 <b>Güncel Fiyat:</b> $${currentPrice.toLocaleString('tr-TR')}\n`;
-      reportMessage += `📈 <b>RSI (14):</b> <code>${rsi}</code> (Nötr / Dengeli)\n`;
-      reportMessage += `📉 <b>MACD Sinyali:</b> ✅ Pozitif Dönem / Yükseliş Eğilimi\n`;
-      reportMessage += `📈 <b>Trend Durumu:</b> [Yükseliş Boğası]\n`;
-      reportMessage += `━━━━━━━━━━━━━━━━━\n\n`;
-      reportMessage += `🔮 <b>Yapay Zeka Görüşü:</b> Market yapısı kararlı duruşunu koruyor. Yukarıdaki TradingView canlı grafiğinde belirtilen hacim girişleri yukarı yönlü ivmeyi destekliyor.\n\n`;
-      reportMessage += `⏰ <i>Analiz Zamanı: ${new Date().toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' })}</i>\n\n`;
-      reportMessage += `💎 VIP sinyaller için: @barbieanaliz\n`;
-      reportMessage += `📢 Kanalımız: t.me/barbianaliz`;
-
-      // 4. Telegram'a sendPhoto (Fotoğraflı Mesaj) Olarak Gönderiyoruz
-      const telegramRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: TARGET_CHANNEL,
-          photo: liveSnapshotUrl, // Canlı grafik resmi
-          caption: reportMessage.trim(), // Altındaki bilgilerimiz
-          parse_mode: 'HTML'
-        }),
-      });
-
-      const telegramResult = await telegramRes.json();
-
-      if (telegramResult.ok) {
+      if (res.ok && result.success) {
         setSent(true);
         setTimeout(() => setSent(false), 3000);
       } else {
-        alert('Telegram gönderim hatası: ' + telegramResult.description);
+        alert('Gönderim hatası: ' + (result.error || 'Bilinmeyen hata'));
       }
     } catch (err) {
       console.error(err);
