@@ -23,44 +23,27 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
-  // TradingView Sunucusundan Gerçek Canlı Grafik Resmini Çekip Gönderen Fonksiyon
+  // API Tetikleme Fonksiyonu
   const handleSendAnalysis = async () => {
     setLoading(true);
     try {
-      // TradingView'in sunucu tarafında anlık grafik resmi (Snapshot) üreten resmi API endpoint'i
-      // Bu link doğrudan TradingView sunucularından saf bir PNG resmi üretir.
-      const tvSnapshotUrl = "https://charts-api.tradingview.com/v1/charts/image?symbol=BINANCE:BTCUSDT&interval=D&theme=dark&style=1&timezone=Europe/Istanbul";
-
-      // Resmi çekip base64 formatına dönüştürüyoruz ki arka plandaki API'ye güvenle aktarabilelim
-      const imageResponse = await fetch(tvSnapshotUrl);
-      const blob = await imageResponse.blob();
-      
-      const reader = new FileReader();
-      reader.readAsDataURL(blob);
-      reader.onloadend = async () => {
-        const base64String = reader.result as string;
-
-        // Backend API'mize bu saf resmi gönderiyoruz
-        const response = await fetch('/api/btc-analysis', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ image: base64String }),
-        });
-
-        const data = await response.json();
-        if (data.success) {
-          alert('Bülten ve Gerçek TradingView Grafiği Kanala Başarıyla Gönderildi! 🎉');
-        } else {
-          alert('Telegram gönderim hatası: ' + data.error);
+      const response = await fetch('/api/btc-analysis', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         }
-        setLoading(false);
-      };
+      });
 
+      const data = await response.json();
+      if (data.success) {
+        alert('Bülten ve TradingView Canlı Grafiği Kanala Başarıyla Gönderildi! 🎉');
+      } else {
+        alert('Telegram gönderim hatası: ' + data.error);
+      }
     } catch (error: any) {
       console.error(error);
-      alert('Grafik resmi çekilirken bir hata oluştu: ' + (error.message || error));
+      alert('Sistem tetiklenirken bir hata oluştu.');
+    } finally {
       setLoading(false);
     }
   };
@@ -126,7 +109,7 @@ export default function App() {
             boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)'
           }}
         >
-          {loading ? '⚡ Canlı Grafik Çekiliyor & Paylaşılıyor...' : '⚡ Şimdi Haber & Görsel Analiz Gönder'}
+          {loading ? '⚡ Otonom Sunucu Grafik Resmini Çekiyor...' : '⚡ Şimdi Haber & Görsel Analiz Gönder'}
         </button>
       </div>
 
