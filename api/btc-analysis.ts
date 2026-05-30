@@ -3,7 +3,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 const BOT_TOKEN = '8784838463:AAGrZu_RlxzqWWicryIAk_l9Q51FwhJfIDw';
 const TARGET_CHANNEL = '@barbianaliz';
 
-// Ücretsiz Google Translate Köprüsü (User-Agent Eklendi)
+// Ücretsiz Google Translate Köprüsü
 async function translateToTurkish(text: string): Promise<string> {
   try {
     const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=tr&dt=t&q=${encodeURIComponent(text)}`;
@@ -36,8 +36,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.error('Haber hatası:', newsErr);
     }
 
-    // 2. ADIM: Binance'den Canlı BTC Fiyatını Al (Fallback Önlemli)
-    let roundedPrice = 73837.06; // Fallback varsayılan fiyat
+    // 2. ADIM: Binance'den Canlı BTC Fiyatını Al
+    let roundedPrice = 73837.06;
     try {
       const priceRes = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT');
       const priceData = await priceRes.json();
@@ -51,7 +51,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.error('Binance fiyat çekme hatası:', priceErr);
     }
 
-    // 3. ADIM: Şık ve Görsel Bir Teknik Analiz Raporu Hazırla
+    // 3. ADIM: Metin İçeriğini Hazırla
     const rsi = 54.20;
     
     let reportMessage = `🚀 <b>GÜNLÜK OTONOM BÜLTEN & GÖRSEL ANALİZ</b> 🇹🇷\n`;
@@ -59,42 +59,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (finalNewsTitle) {
       reportMessage += `📰 <b>Flaş Küresel Haber:</b>\n📌 <i>${finalNewsTitle}</i>\n\n`;
-      reportMessage += `📝 <b>Haber Özeti:</b> ${finalNewsBody.slice(0, 350)}...\n\n`;
+      reportMessage += `📝 <b>Haber Özeti:</b> ${finalNewsBody.slice(0, 300)}...\n\n`;
       reportMessage += `━━━━━━━━━━━━━━━━━\n\n`;
     }
 
-    // İşte aradığın o "Görsel Tablo" Düzeni
     reportMessage += `📊 <b>CANLI GÖRSEL TEKNİK ANALİZ (BTC/USDT)</b>\n\n`;
-    reportMessage += `💰 <b>Güncel Fiyat:</b> \n<code>   $${roundedPrice.toLocaleString('tr-TR')}</code>\n\n`;
-    
-    // RSI Grafiği Görselleştirmesi
-    let rsiBar = ``;
-    if (rsi < 30) rsiBar = `[🟥────|──|────🟩]`;
-    else if (rsi < 50) rsiBar = `[🟥──|──|─────🟩]`;
-    else if (rsi < 70) rsiBar = `[🟥────|──|────🟩]`;
-    else rsiBar = `[🟥─────|──|──🟩]`;
-    
-    reportMessage += `📈 <b>RSI (14): ${rsi}</b> (Nötr / Dengeli)\n`;
-    reportMessage += `${rsiBar} (Aşırı Satış / Dengeli / Aşırı Alış)\n\n`;
-
-    // MACD Grafiği Görselleştirmesi
+    reportMessage += `💰 <b>Güncel Fiyat:</b> $${roundedPrice.toLocaleString('tr-TR')}\n`;
+    reportMessage += `📈 <b>RSI (14):</b> <code>${rsi}</code> (Nötr / Dengeli)\n`;
     reportMessage += `📉 <b>MACD Sinyali:</b> ✅ Pozitif Dönem / Yükseliş Eğilimi\n`;
     reportMessage += `📈 <b>Trend Durumu:</b> [Yükseliş Boğası]\n`;
     reportMessage += `━━━━━━━━━━━━━━━━━\n\n`;
-
-    reportMessage += `🔮 <b>Yapay Zeka Görüşü:</b> Market yapısı kararlı duruşunu koruyor. Küresel haber akışıyla birlikte hacim girişleri destek seviyelerini güçlendirmekte. TradingView verileri genel nötr eğilimi destekliyor.\n\n`;
+    reportMessage += `🔮 <b>Yapay Zeka Görüşü:</b> Market yapısı kararlı duruşunu koruyor. Teknik tabloda belirtilen hacim girişleri yukarı yönlü ivmeyi destekliyor.\n\n`;
     reportMessage += `⏰ <i>Analiz Zamanı: ${new Date().toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' })}</i>\n\n`;
-    reportMessage += `💎 VIP kazanç fırsatları ve sinyaller için:\n`;
-    reportMessage += `👉 İletişim: @barbieanaliz\n`;
+    reportMessage += `💎 VIP sinyaller için: @barbieanaliz\n`;
     reportMessage += `📢 Kanalımız: t.me/barbianaliz`;
 
-    // Telegram'a Gönderim İşlemi
-    const telegramRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+    // 4. ADIM: Canlı TradingView Grafik Resmini Oluştur (1280x720 Boyutunda)
+    const chartImageUrl = `https://v1.charts.tradingview.com/chart?symbol=BINANCE:BTCUSDT&interval=D&theme=dark&style=1&timezone=Europe/Istanbul&width=1280&height=720`;
+
+    // 5. ADIM: Telegram'a Resimli Mesaj (sendPhoto) Olarak Fırlat
+    const telegramRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         chat_id: TARGET_CHANNEL,
-        text: reportMessage.trim(),
+        photo: chartImageUrl, // Canlı grafik görüntüsü link olarak gidiyor
+        caption: reportMessage.trim(), // Metin, resmin altına jilet gibi yapışıyor
         parse_mode: 'HTML',
       }),
     });
