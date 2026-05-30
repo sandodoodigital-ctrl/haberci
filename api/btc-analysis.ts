@@ -3,6 +3,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 const BOT_TOKEN = '8784838463:AAGrZu_RlxzqWWicryIAk_l9Q51FwhJfIDw';
 const TARGET_CHANNEL = '@barbianaliz';
 
+// Ücretsiz Google Translate Köprüsü
 async function translateToTurkish(text: string): Promise<string> {
   try {
     const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=tr&dt=t&q=${encodeURIComponent(text)}`;
@@ -16,6 +17,7 @@ async function translateToTurkish(text: string): Promise<string> {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // CORS Ayarları
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
@@ -29,6 +31,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     let finalNewsTitle = '';
     let finalNewsBody = '';
 
+    // 1. Global Kripto Haberini Çek ve Çevir
     try {
       const newsRes = await fetch('https://min-api.cryptocompare.com/data/v2/news/?lang=EN', {
         headers: { 'User-Agent': 'Mozilla/5.0' }
@@ -40,9 +43,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         finalNewsBody = await translateToTurkish(latestNews.body);
       }
     } catch (e) {
-      console.error(e);
+      console.error('Haber çekilemedi:', e);
     }
 
+    // 2. Binance'den Canlı BTC Fiyatını Çek
     let roundedPrice = 73964;
     try {
       const priceRes = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT');
@@ -51,12 +55,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         roundedPrice = Math.round(parseFloat(priceData.price) * 100) / 100;
       }
     } catch (e) {
-      console.error(e);
+      console.error('Fiyat çekilemedi:', e);
     }
 
     const rsi = 54.20;
 
-    let reportMessage = `🚀 <b>GÜNLÜK OTONOM BÜLTEN & GÖRSEL ANALİZ</b> 🇹🇷\n`;
+    // 3. Telegram'ın Doğrudan Algılayıp Üst Kısımda Grafik Olarak Açacağı Canlı Resim Linki
+    const chartImageUrl = `https://charts-api.tradingview.com/v1/charts/image?symbol=BINANCE:BTCUSDT&interval=D&theme=dark&style=1&timezone=Europe/Istanbul`;
+
+    // 4. Şık Bülten Metni (En tepeye resmi tetikleyecek görünmez linki koyduk)
+    let reportMessage = `<a href="${chartImageUrl}">&#8205;</a>`;
+    reportMessage += `🚀 <b>GÜNLÜK OTONOM BÜLTEN & GÖRSEL ANALİZ</b> 🇹🇷\n`;
     reportMessage += `━━━━━━━━━━━━━━━━━\n\n`;
 
     if (finalNewsTitle) {
@@ -71,23 +80,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     reportMessage += `📉 <b>MACD Sinyali:</b> ✅ Pozitif Dönem / Yükseliş Eğilimi\n`;
     reportMessage += `📈 <b>Trend Durumu:</b> [Yükseliş Boğası]\n`;
     reportMessage += `━━━━━━━━━━━━━━━━━\n\n`;
-    reportMessage += `🔮 <b>Yapay Zeka Görüşü:</b> Market yapısı kararlı duruşunu koruyor. TradingView canlı grafiğinde belirtilen hacim girişleri yukarı yönlü ivmeyi destekliyor.\n\n`;
+    reportMessage += `🔮 <b>Yapay Zeka Görüşü:</b> Market yapısı kararlı duruşunu koruyor. Ekrandaki TradingView canlı grafiğinde belirtilen hacim girişleri yukarı yönlü ivmeyi destekliyor.\n\n`;
     reportMessage += `⏰ <i>Analiz Zamanı: ${new Date().toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' })}</i>\n\n`;
     reportMessage += `💎 VIP sinyaller için: @barbieanaliz\n`;
     reportMessage += `📢 Kanalımız: t.me/barbianaliz`;
 
-    // TradingView Canlı Anlık PNG Resim Linki
-    const chartImageUrl = `https://s3.tradingview.com/snapshots/b/BINANCE:BTCUSDT.png`;
-
-    // Telegram'a Fotoğraflı Bülten Gönderme Tetikleyicisi
-    const telegramRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
+    // 5. Telegram API'sine sendMessage olarak atıyoruz (Web sayfa önizlemesi açık)
+    const telegramRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         chat_id: TARGET_CHANNEL,
-        photo: chartImageUrl,
-        caption: reportMessage.trim(),
-        parse_mode: 'HTML'
+        text: reportMessage.trim(),
+        parse_mode: 'HTML',
+        disable_web_page_preview: false // Resmin en üstte jilet gibi görünmesi için burası false kalmalı!
       }),
     });
 
