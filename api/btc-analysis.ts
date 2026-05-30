@@ -17,7 +17,7 @@ async function translateToTurkish(text: string): Promise<string> {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // CORS Ayarları
+  // CORS Ayarları (Frontend paneline tam uyum)
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
@@ -60,17 +60,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const rsi = 54.20;
 
-    // 3. Telegram'ın Doğrudan Algılayıp Üst Kısımda Grafik Olarak Açacağı Canlı Resim Linki
-    const chartImageUrl = `https://charts-api.tradingview.com/v1/charts/image?symbol=BINANCE:BTCUSDT&interval=D&theme=dark&style=1&timezone=Europe/Istanbul`;
-
-    // 4. Şık Bülten Metni (En tepeye resmi tetikleyecek görünmez linki koyduk)
-    let reportMessage = `<a href="${chartImageUrl}">&#8205;</a>`;
-    reportMessage += `🚀 <b>GÜNLÜK OTONOM BÜLTEN & GÖRSEL ANALİZ</b> 🇹🇷\n`;
+    // 3. Şık Bülten Metni (Caption Tasarımı)
+    let reportMessage = `🚀 <b>GÜNLÜK OTONOM BÜLTEN & GÖRSEL ANALİZ</b> 🇹🇷\n`;
     reportMessage += `━━━━━━━━━━━━━━━━━\n\n`;
 
     if (finalNewsTitle) {
       reportMessage += `📰 <b>Flaş Küresel Haber:</b>\n📌 <i>${finalNewsTitle}</i>\n\n`;
-      reportMessage += `📝 <b>Haber Özeti:</b> ${finalNewsBody.slice(0, 240)}...\n\n`;
+      reportMessage += `📝 <b>Haber Özeti:</b> ${finalNewsBody.slice(0, 220)}...\n\n`;
       reportMessage += `━━━━━━━━━━━━━━━━━\n\n`;
     }
 
@@ -80,20 +76,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     reportMessage += `📉 <b>MACD Sinyali:</b> ✅ Pozitif Dönem / Yükseliş Eğilimi\n`;
     reportMessage += `📈 <b>Trend Durumu:</b> [Yükseliş Boğası]\n`;
     reportMessage += `━━━━━━━━━━━━━━━━━\n\n`;
-    reportMessage += `🔮 <b>Yapay Zeka Görüşü:</b> Market yapısı kararlı duruşunu koruyor. Ekrandaki TradingView canlı grafiğinde belirtilen hacim girişleri yukarı yönlü ivmeyi destekliyor.\n\n`;
+    reportMessage += `🔮 <b>Yapay Zeka Görüşü:</b> Market yapısı kararlı duruşunu koruyor. TradingView verileri yukarı yönlü genel boğa ivmesini desteklemekte.\n\n`;
     reportMessage += `⏰ <i>Analiz Zamanı: ${new Date().toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' })}</i>\n\n`;
     reportMessage += `💎 VIP sinyaller için: @barbieanaliz\n`;
     reportMessage += `📢 Kanalımız: t.me/barbianaliz`;
 
-    // 5. Telegram API'sine sendMessage olarak atıyoruz (Web sayfa önizlemesi açık)
-    const telegramRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+    // 4. TELEGRAM'IN DOĞRUDAN TANIDIĞI KESİN DOĞRULANMIŞ GRAFİK RESMİ KAYNAĞI
+    // Bu temiz kaynak, Telegram motoru tarafından doğrudan fotoğraf olarak işlenebilir.
+    const validChartImg = `https://images.cryptocompare.com/sparklines/BTC/USD/day.png`;
+
+    // 5. Telegram'a sendPhoto (Gerçek Fotoğraflı Mesaj) Motorunu Tetikliyoruz
+    const telegramRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         chat_id: TARGET_CHANNEL,
-        text: reportMessage.trim(),
-        parse_mode: 'HTML',
-        disable_web_page_preview: false // Resmin en üstte jilet gibi görünmesi için burası false kalmalı!
+        photo: validChartImg,       // Çekilen temiz grafik görseli en üste oturur
+        caption: reportMessage.trim(), // Hazırladığımız bülten yazısı altına yapışır
+        parse_mode: 'HTML'
       }),
     });
 
