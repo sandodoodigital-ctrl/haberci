@@ -1,8 +1,8 @@
 {
-  "name": "projenin-adi",
-  "version": "1.0.0",
-  "dependencies": {
-    "@vercel/node": "^3.0.0",
-    "baska-paketler-varsa-burada-durur": "1.0.0"
-  }
+  "crons": [
+    {
+      "path": "/api/btc-analysis",
+      "schedule": "0 7 * * *"
+    }
+  ]
 }
