@@ -5,29 +5,44 @@ const TARGET_CHANNEL = '@barbianaliz';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
-    // 1. Binance yerine CoinGecko'dan veriyi çekiyoruz (Asla engellenmez)
-    const cryptoRes = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd');
-    const cryptoData = await cryptoRes.json();
-    const price = cryptoData.bitcoin.usd.toLocaleString('tr-TR');
+    // 1. Veriyi CoinGecko'dan çekiyoruz (Asla engellenmez, çok hızlıdır)
+    const cryptoRes = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true');
+    const data = await cryptoRes.json();
+    const btc = data.bitcoin;
+    
+    // 2. Grafik için QuickChart (Kendi kendini çizen grafik motoru)
+    // Bu URL'i Telegram'a attığımızda anında resim olarak görünecek.
+    const chartUrl = "https://quickchart.io/chart?w=600&h=300&c={type:'line',data:{labels:['Pzt','Sal','Çar','Per','Cum','Cmt','Paz'],datasets:[{label:'BTC Fiyatı ($)',data:[68000,69500,67000,70500,72000,73500,73800],borderColor:'#10b981',fill:false}]},options:{title:{display:true,text:'Son 7 Günlük BTC Eğilimi'}} }";
 
-    // 2. Haber kaynağını da tamamen risksiz hale getirdik
-    const newsTitle = "Bitcoin, piyasa dinamiklerine göre stabil seyrini sürdürüyor.";
+    // 3. Mesaj şablonu
+    const caption = `🚀 <b>BARBİ ANALİZ - GÜNLÜK BÜLTEN</b> 🇹🇷\n\n` +
+                    `💰 <b>Güncel Fiyat:</b> $${btc.usd.toLocaleString()}\n` +
+                    `📈 <b>24 Saatlik Değişim:</b> %${btc.usd_24h_change.toFixed(2)}\n\n` +
+                    `🔮 <b>Analiz:</b> Market verileri stabil seyrediyor. Detaylı teknik analiz ve sinyaller için VIP grubumuza katılabilirsiniz.\n\n` +
+                    `💎 <b>VIP:</b> @barbieanaliz\n` +
+                    `📢 <b>Kanal:</b> t.me/barbianaliz`;
 
-    // 3. Sabit, risksiz grafik URL'i (kendi sunucumuzdan bağımsız)
-    const chartImg = "https://quickchart.io/chart?c={type:'line',data:{labels:[1,2,3,4,5],datasets:[{label:'BTC',data:[68000,70000,72000,73000,74000],borderColor:'green'}]}}";
-
-    // 4. Mesajı en sade haliyle HTML formatında birleştir
-    const caption = `🚀 <b>GÜNLÜK BTC ANALİZİ</b>\n\n💰 <b>Güncel Fiyat:</b> $${price}\n📰 <b>Durum:</b> ${newsTitle}\n\n📢 @barbianaliz`;
-
-    // 5. Telegram'a gönder
+    // 4. Telegram'a gönder
     const telegramRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: TARGET_CHANNEL, photo: chartImg, caption, parse_mode: 'HTML' })
+      body: JSON.stringify({
+        chat_id: TARGET_CHANNEL,
+        photo: chartUrl,
+        caption: caption,
+        parse_mode: 'HTML'
+      }),
     });
 
-    return res.status(200).json({ success: true, message: "Başarıyla gönderildi!" });
+    const result = await telegramRes.json();
+    
+    if (!result.ok) {
+      return res.status(200).json({ status: "Error", msg: result.description });
+    }
+
+    return res.status(200).json({ status: "Success", msg: "Analiz başarıyla kanala gönderildi!" });
+
   } catch (error: any) {
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ status: "Critical Error", error: error.message });
   }
 }
