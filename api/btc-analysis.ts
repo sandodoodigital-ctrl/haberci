@@ -9,10 +9,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const data = await cryptoRes.json();
     const price = data.bitcoin.usd.toLocaleString('tr-TR');
 
-    // Telegram'ın HTML sayfasına dönmesini engellemek için doğrudan imgur benzeri proxy kullanıyoruz
-    const chartUrl = "https://quickchart.io/chart?w=600&h=300&format=png&c={type:'line',data:{datasets:[{data:[70000,72000,71000,73000,74000],borderColor:'green'}]}}";
+    // Grafik URL'i: label parametresi eklendi, artık undefined yazmayacak
+    const chartUrl = "https://quickchart.io/chart?w=600&h=300&c={type:'line',data:{labels:['1','2','3','4','5'],datasets:[{label:'BTC',data:[70000,71000,72000,73000,73771],borderColor:'green',fill:true}]},options:{title:{text:'Bitcoin Fiyatı'}} }";
 
-    const telegramRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
+    const response = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -23,14 +23,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       })
     });
 
-    const result = await telegramRes.json();
-    
-    // Eğer hala hata verirse Telegram'a link olarak değil dosya gibi davranması için parametre ekliyoruz
-    if (!result.ok) {
-        return res.status(200).json({ status: "Error", details: result.description });
-    }
-
-    return res.status(200).json({ success: true });
+    const result = await response.json();
+    return res.status(200).json(result);
   } catch (error: any) {
     return res.status(500).json({ error: error.message });
   }
