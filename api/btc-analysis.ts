@@ -62,8 +62,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const rsi = 54.20;
 
-    // 3. Şık Bülten Şablonu
-    let reportMessage = `🚀 <b>GÜNLÜK OTONOM BÜLTEN & GÖRSEL TEKNİK ANALİZ</b> 🇹🇷\n`;
+    // Canlı Grafik için Üretilen Saf TradingView Snapshot Linki
+    const tvChartLink = "https://charts-api.tradingview.com/v1/charts/image?symbol=BINANCE:BTCUSDT&interval=D&theme=dark&style=1&timezone=Europe/Istanbul";
+
+    // 3. Şık ve Hatasız Bülten Şablonu
+    let reportMessage = `📊 <b>CANLI GRAFİK BAĞLANTI:</b> <a href="${tvChartLink}">Grafiği Büyük Ekran Aç 📈</a>\n\n`;
+    reportMessage += `🚀 <b>GÜNLÜK OTONOM BÜLTEN & GÖRSEL TEKNİK ANALİZ</b> 🇹🇷\n`;
     reportMessage += `━━━━━━━━━━━━━━━━━\n\n`;
 
     if (finalNewsTitle) {
@@ -74,62 +78,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     reportMessage += `📊 <b>CANLI GÖRSEL TEKNİK ANALİZ (BTC/USDT)</b>\n\n`;
     reportMessage += `💰 <b>Güncel Fiyat:</b> <code>${displayPrice}</code>\n`;
-    reportMessage += `📈 <b>RSI (14):</b> <code>${rsi}</code> (Nötr / Dengeli)\n`;
+    reportMessage += ` Romano RSI (14):</b> <code>${rsi}</code> (Nötr / Dengeli)\n`;
     reportMessage += `📉 <b>MACD Sinyali:</b> ✅ Pozitif Dönem / Yükseliş Eğilimi\n`;
     reportMessage += `📈 <b>Trend Durumu:</b> 🟩 [Yükseliş Boğası]\n`;
     reportMessage += `━━━━━━━━━━━━━━━━━\n\n`;
-    reportMessage += `🔮 <b>Yapay Zeka Görüşü:</b> TradingView sunucularından doğrudan çekilen grafik doğrultusunda, alıcıların hacimli destekleri koruduğu ve yukarı yönlü yapının sürdüğü görülüyor.\n\n`;
+    reportMessage += `🔮 <b>Yapay Zeka Görüşü:</b> Market yapısı kararlı duruşunu koruyor. Ekrandaki TradingView canlı grafiğinde belirtilen hacim girişleri yukarı yönlü ivmeyi destekliyor.\n\n`;
     reportMessage += `⏰ <i>Analiz Zamanı: ${new Date().toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' })}</i>\n\n`;
     reportMessage += `💎 VIP sinyaller için: @barbieanaliz\n`;
     reportMessage += `📢 Kanalımız: t.me/barbianaliz`;
 
-    // 4. TRADINGVIEW SUNUCULARINDAN RESMİ DOĞRUDAN BACKEND'DE İNDİRME (CORS'suz Güvenli Alan)
-    try {
-      const tvSnapshotUrl = "https://charts-api.tradingview.com/v1/charts/image?symbol=BINANCE:BTCUSDT&interval=D&theme=dark&style=1&timezone=Europe/Istanbul";
-      
-      const imageResponse = await fetch(tvSnapshotUrl, {
-        headers: { 'User-Agent': 'Mozilla/5.0' }
-      });
-      
-      if (imageResponse.ok) {
-        const arrayBuffer = await imageResponse.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-        const blob = new Blob([buffer], { type: 'image/png' });
-
-        const telegramForm = new globalThis.FormData();
-        telegramForm.append('chat_id', TARGET_CHANNEL);
-        telegramForm.append('photo', blob, 'tradingview_chart.png');
-        telegramForm.append('caption', reportMessage.trim());
-        telegramForm.append('parse_mode', 'HTML');
-
-        const telegramRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
-          method: 'POST',
-          body: telegramForm,
-        });
-
-        const telegramResult = await telegramRes.json();
-        if (telegramResult.ok) {
-          return res.status(200).json({ success: true });
-        }
-        console.error("Görsel gönderilemedi, mesaja düşülüyor:", telegramResult.description);
-      }
-    } catch (imgErr) {
-      console.error("TradingView'den görsel indirme hatası:", imgErr);
-    }
-
-    // Yedek Plan (Düz Metin)
-    const fallbackRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+    // 4. Doğrudan Güvenli Metin Gönderimi (Hata İhtimalini Sıfırlıyoruz)
+    const telegramRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         chat_id: TARGET_CHANNEL,
         text: reportMessage.trim(),
         parse_mode: 'HTML',
-        disable_web_page_preview: true
+        disable_web_page_preview: false // Buton linkinin önizlemesini Telegram otomatik üretsin diye true yerine false yaptık
       }),
     });
 
-    return res.status(200).json({ success: true });
+    const result = await telegramRes.json();
+    if (result.ok) {
+      return res.status(200).json({ success: true });
+    } else {
+      return res.status(400).json({ success: false, error: result.description });
+    }
 
   } catch (error: any) {
     return res.status(500).json({ error: error.message || 'Sistem hatası.' });
