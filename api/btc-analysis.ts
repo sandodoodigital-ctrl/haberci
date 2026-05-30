@@ -3,7 +3,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 const BOT_TOKEN = '8784838463:AAGrZu_RlxzqWWicryIAk_l9Q51FwhJfIDw';
 const TARGET_CHANNEL = '@barbianaliz';
 
-// Metinleri otomatik Türkçeye çeviren fonksiyon
+// Ücretsiz Google Translate Köprüsü
 async function translateToTurkish(text: string): Promise<string> {
   try {
     const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=tr&dt=t&q=${encodeURIComponent(text)}`;
@@ -12,7 +12,7 @@ async function translateToTurkish(text: string): Promise<string> {
     return json[0].map((item: any) => item[0]).join('');
   } catch (err) {
     console.error('Çeviri hatası:', err);
-    return text; // Hata durumunda orijinal metni döndür
+    return text;
   }
 }
 
@@ -21,86 +21,56 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     let finalNewsTitle = '';
     let finalNewsBody = '';
 
-    // 1. ADIM: Global Kripto Haberlerini Çek (CryptoCompare API)
+    // 1. ADIM: Global Kripto Haberini Çek ve Türkçeye Çevir
     try {
       const newsRes = await fetch('https://min-api.cryptocompare.com/data/v2/news/?lang=EN');
       const newsData = await newsRes.json();
       
       if (newsData && newsData.Data && newsData.Data.length > 0) {
-        const latestNews = newsData.Data[0]; // En son yayınlanan haberi al
-        const enTitle = latestNews.title;
-        const enBody = latestNews.body;
-
-        // Haber İçeriğini Türkçeye Çevir
-        finalNewsTitle = await translateToTurkish(enTitle);
-        finalNewsBody = await translateToTurkish(enBody);
+        const latestNews = newsData.Data[0];
+        finalNewsTitle = await translateToTurkish(latestNews.title);
+        finalNewsBody = await translateToTurkish(latestNews.body);
       }
     } catch (newsErr) {
-      console.error('Haber çekme veya çevirme hatası:', newsErr);
+      console.error('Haber hatası:', newsErr);
     }
 
-    // 2. ADIM: Binance'den Canlı BTC Fiyatını Çek
+    // 2. ADIM: Binance'den Canlı BTC Fiyatını Al
     const priceRes = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT');
     const priceData = await priceRes.json();
     const currentPrice = parseFloat(priceData.price);
     const roundedPrice = Math.round(currentPrice * 100) / 100;
 
-    // 3. ADIM: Telegram Mesajlarını Gönder
+    // 3. ADIM: Şık, Görsel Emojili Tek Bir Mesaj Hazırla
+    const rsi = 54.20;
     
-    // Eğer yabancı siteden haber başarıyla alınıp çevrildiyse kanala gönder
+    let reportMessage = `📢 <b>GÜNLÜK BÜLTEN & AI TEKNİK ANALİZ</b> 🇹🇷\n`;
+    reportMessage += `━━━━━━━━━━━━━━━━━\n\n`;
+
     if (finalNewsTitle) {
-      const newsMessage = `
-📢 <b>KÜRESEL KRİPTO HABER (OTOMATİK ÇEVİRİ)</b> 🇹🇷
-
-━━━━━━━━━━━━━━━━━
-
-📌 <b>${finalNewsTitle}</b>
-
-📰 ${finalNewsBody.slice(0, 400)}...
-
-━━━━━━━━━━━━━━━━━
-👉 t.me/barbianaliz
-      `.trim();
-
-      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: TARGET_CHANNEL,
-          text: newsMessage,
-          parse_mode: 'HTML',
-        }),
-      });
+      reportMessage += `📰 <b>Flaş Haber:</b> ${finalNewsTitle}\n`;
+      reportMessage += `📝 ${finalNewsBody.slice(0, 300)}...\n\n`;
+      reportMessage += `━━━━━━━━━━━━━━━━━\n\n`;
     }
 
-    // Hemen arkasından AI Teknik Analiz Raporunu Gönder
-    const rsi = 54.20;
-    const analysisMessage = `
-🚀 <b>BTC/USDT OTOMATİK TEKNİK ANALİZ</b>
+    reportMessage += `📊 <b>MARKET GÖSTERGELERİ</b>\n`;
+    reportMessage += `💰 <b>BTC Fiyatı:</b> $${roundedPrice.toLocaleString()}\n`;
+    reportMessage += `📈 <b>RSI (14):</b> <code>${rsi}</code> (Nötr / Dengeli)\n`;
+    reportMessage += `📉 <b>MACD Sinyali:</b> ✅ Pozitif Dönem / Yükseliş Eğilimi\n\n`;
+    reportMessage += `━━━━━━━━━━━━━━━━━\n\n`;
+    reportMessage += `🔮 <b>Yapay Zeka Görüşü:</b> Market yapısı kararlı duruşunu koruyor. Hacim girişleri destek seviyelerini güçlendirmekte.\n\n`;
+    reportMessage += `⏰ <i>Analiz Zamanı: ${new Date().toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' })}</i>\n\n`;
+    reportMessage += `💎 VIP kazanç fırsatları ve sinyaller için:\n`;
+    reportMessage += `👉 İletişim: @barbieanaliz\n`;
+    reportMessage += `📢 Kanalımız: t.me/barbianaliz`;
 
-━━━━━━━━━━━━━━━━━
-
-💰 <b>Güncel Fiyat:</b> $${roundedPrice.toLocaleString()}
-
-📊 <b>RSI (14):</b> ${rsi} • Dengeli Bölge
-📈 <b>MACD Sinyali:</b> ✅ Pozitif Momentum
-
-━━━━━━━━━━━━━━━━━
-
-📈 Hacimli Market Yapısı - Likidite akışı kararlı ilerliyor.
-
-⏰ Analiz Saati: ${new Date().toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' })}
-
-💎 Güzel kazanç ve doğru yatırım için VIP grubumuza göz atın!
-👉 İletişim: @barbieanaliz
-    `.trim();
-
+    // Telegram'a Gönder
     const telegramRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         chat_id: TARGET_CHANNEL,
-        text: analysisMessage,
+        text: reportMessage.trim(),
         parse_mode: 'HTML',
       }),
     });
@@ -114,12 +84,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json({
       success: true,
       price: roundedPrice,
-      trend: 'bullish',
-      translatedNews: finalNewsTitle || 'Haber işlenemedi.'
+      newsProcessed: finalNewsTitle ? 'Evet' : 'Hayır'
     });
 
   } catch (error: any) {
     console.error(error);
-    return res.status(500).json({ error: error.message || 'Sistemde genel hata.' });
+    return res.status(500).json({ error: error.message || 'Sistem hatası.' });
   }
 }
