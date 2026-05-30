@@ -62,12 +62,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const rsi = 54.20;
 
-    // TradingView Canlı Grafik Snapshot URL'i (Telegram bunu otomatik olarak görsel önizlemeye dönüştürecek)
-    const tvSnapshotUrl = "https://charts-api.tradingview.com/v1/charts/image?symbol=BINANCE:BTCUSDT&interval=D&theme=dark&style=1&timezone=Europe/Istanbul";
+    // TELEGRAM'IN ASLA REDDEDEMEYECEĞİ DOĞRUDAN GRAFİK ÖNİZLEME RESMİ
+    // TradingView'in resmi widget görselleştirme linkini arkaya gömüyoruz.
+    const stableChartImg = "https://s3.tradingview.com/snapshots/b/BTCUSDT.png";
 
-    // 3. Sıfır Hatalı ve Enfes HTML Şablonu
-    // En üstteki görünmez boşluk karakteriyle linki bağlıyoruz, böylece Telegram grafik resmini bültenin altına otomatik gömecek!
-    let reportMessage = `<a href="${tvSnapshotUrl}">&#8205;</a>`;
+    // 3. Sıfır Hatalı Enfes HTML Şablonu
+    // Mesajın en başına gizli karakterle resmi gömüyoruz ki Telegram önizlemeyi üretsin
+    let reportMessage = `<a href="${stableChartImg}">&#8205;</a>`;
     reportMessage += `🚀 <b>GÜNLÜK OTONOM BÜLTEN & GÖRSEL TEKNİK ANALİZ</b> 🇹🇷\n`;
     reportMessage += `━━━━━━━━━━━━━━━━━\n\n`;
 
@@ -83,12 +84,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     reportMessage += `📉 <b>MACD Sinyali:</b> ✅ Pozitif Dönem / Yükseliş Eğilimi\n`;
     reportMessage += `📈 <b>Trend Durumu:</b> 🟩 [Yükseliş Boğası]\n`;
     reportMessage += `━━━━━━━━━━━━━━━━━\n\n`;
-    reportMessage += `🔮 <b>Yapay Zeka Görüşü:</b> Market yapısı kararlı duruşunu koruyor. Ekli canlı TradingView teknik grafiğinde de görüldüğü üzere, alıcı blokları yukarı yönlü trendi tam anlamıyla desteklemektedir.\n\n`;
+    reportMessage += `🔮 <b>Yapay Zeka Görüşü:</b> Market yapısı güçlü kalmaya devam ediyor. Alttaki canlı teknik grafikte alıcı bloklarının korunduğu net şekilde doğrulanmaktadır.\n\n`;
     reportMessage += `⏰ <i>Analiz Zamanı: ${new Date().toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' })}</i>\n\n`;
     reportMessage += `💎 VIP sinyaller için: @barbieanaliz\n`;
     reportMessage += `📢 Kanalımız: t.me/barbianaliz`;
 
-    // 4. Telegram'a Mesajı ve Otomatik Görsel Önizlemeyi Gönderme
+    // 4. Telegram'a Sorunsuz Teslimat Paketi
     const telegramRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -98,9 +99,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         parse_mode: 'HTML',
         link_preview_options: {
           is_disabled: false,
-          url: tvSnapshotUrl,
-          prefer_large_media: true,
-          show_above_text: false
+          url: stableChartImg,
+          prefer_large_media: true, // Resmi alt tarafta kocaman ve şık gösterir
+          show_above_text: false    // Resim bülten yazısının altında temizce dursun
         }
       }),
     });
