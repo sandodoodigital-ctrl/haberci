@@ -1,128 +1,172 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-const BOT_TOKEN = '8784838463:AAGrZu_RlxzqWWicryIAk_l9Q51FwhJfIDw';
-const TARGET_CHANNEL = '@barbianaliz';
+const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN!;
+const CHANNEL_ID = process.env.TELEGRAM_CHANNEL || '@barbianaliz';
+
+// Telegram'ın genellikle sorunsuz kabul ettiği statik snapshot örneği
+const CHART_IMAGE =
+  'https://s3.tradingview.com/snapshots/b/BTCUSDT.png';
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+async function getBTCPrice(): Promise<number> {
+  const res = await fetch(
+    'https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT'
+  );
+
+  const data = await res.json();
+
+  return Number(data.price);
+}
+
+async function getLatestNews(): Promise<{
+  title: string;
+  body: string;
+}> {
+  const res = await fetch(
+    'https://min-api.cryptocompare.com/data/v2/news/?lang=EN'
+  );
+
+  const data = await res.json();
+
+  const latest = data?.Data?.[0];
+
+  return {
+    title: latest?.title || 'Kripto piyasasında yeni gelişmeler',
+    body: latest?.body || '',
+  };
+}
 
 async function translateToTurkish(text: string): Promise<string> {
   if (!text) return '';
+
   try {
-    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=tr&dt=t&q=${encodeURIComponent(text)}`;
-    const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
-    const json = await res.json();
-    return json?.[0]?.map((item: any) => item[0]).join('') || text;
-  } catch (err) {
-    console.error('Çeviri hatası:', err);
+    const url =
+      'https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=tr&dt=t&q=' +
+      encodeURIComponent(text);
+
+    const res = await fetch(url);
+    const data = await res.json();
+
+    return data?.[0]?.map((x: any) => x[0]).join('') || text;
+  } catch {
     return text;
   }
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-
-  try {
-    let finalNewsTitle = '';
-    let finalNewsBody = '';
-
-    // 1. Küresel Kripto Haberini Çek ve Çevir
-    try {
-      const newsRes = await fetch('https://min-api.cryptocompare.com/data/v2/news/?lang=EN', {
-        headers: { 'User-Agent': 'Mozilla/5.0' }
-      });
-      const newsData = await newsRes.json();
-      if (newsData?.Data?.length > 0) {
-        const latestNews = newsData.Data[0];
-        finalNewsTitle = await translateToTurkish(latestNews.title || '');
-        finalNewsBody = await translateToTurkish(latestNews.body || '');
-      }
-    } catch (e) {
-      console.error('Haber hatası:', e);
-    }
-
-    // 2. Binance Canlı Fiyatı Çek
-    let displayPrice = '$73.929,10';
-    try {
-      const priceRes = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT');
-      const priceData = await priceRes.json();
-      if (priceData?.price) {
-        const parsedPrice = parseFloat(priceData.price);
-        if (!isNaN(parsedPrice)) {
-          displayPrice = '$' + parsedPrice.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        }
-      }
-    } catch (e) {
-      console.error('Fiyat hatası:', e);
-    }
-
-    const rsi = 54.20;
-
-    // Telegram'ın %100 kabul ettiği TradingView kalıcı ve engelsiz grafik resim havuzu URL'i
-    const cleanChartImgUrl = "https://s3.tradingview.com/snapshots/b/BTCUSDT.png";
-
-    // 3. Telegram Resim Altı Yazısı (Caption) - HTML Kurallarına Tam Uyumlu
-    let captionMessage = `🚀 <b>GÜNLÜK OTONOM BÜLTEN & GÖRSEL TEKNİK ANALİZ</b> 🇹🇷\n`;
-    captionMessage += `━━━━━━━━━━━━━━━━━\n\n`;
-
-    if (finalNewsTitle) {
-      captionMessage += `📰 <b>Flaş Küresel Haber:</b>\n📌 <i>${finalNewsTitle}</i>\n\n`;
-      captionMessage += `📝 <b>Haber Özeti:</b> ${finalNewsBody.slice(0, 160)}...\n\n`;
-      captionMessage += `━━━━━━━━━━━━━━━━━\n\n`;
-    }
-
-    captionMessage += `📊 <b>CANLI GÖRSEL TEKNİK ANALİZ (BTC/USDT)</b>\n\n`;
-    captionMessage += `💰 <b>Güncel Fiyat:</b> <code>${displayPrice}</code>\n`;
-    captionMessage += `📈 <b>RSI (14):</b> <code>${rsi}</code> (Nötr / Dengeli)\n`;
-    captionMessage += `📉 <b>MACD Sinyali:</b> ✅ Pozitif Dönem / Yükseliş Eğilimi\n`;
-    captionMessage += `📈 <b>Trend Durumu:</b> 🟩 [Yükseliş Boğası]\n`;
-    captionMessage += `━━━━━━━━━━━━━━━━━\n\n`;
-    captionMessage += `🔮 <b>Yapay Zeka Görüşü:</b> Market yapısı güçlü kalmaya devam ediyor. Yukarıdaki canlı teknik grafikte alıcı bloklarının korunduğu net şekilde doğrulanmaktadır.\n\n`;
-    captionMessage += `⏰ <i>Analiz Zamanı: ${new Date().toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' })}</i>\n\n`;
-    captionMessage += `💎 VIP sinyaller: @barbieanaliz | 📢 Kanal: t.me/barbianaliz`;
-
-    // 4. Doğrudan "Resimli Mesaj" (sendPhoto) Olarak Gönderme Dengesi
-    const telegramRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
+async function sendPhoto(caption: string) {
+  const res = await fetch(
+    `https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`,
+    {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify({
-        chat_id: TARGET_CHANNEL,
-        photo: cleanChartImgUrl,
-        caption: captionMessage.trim(),
-        parse_mode: 'HTML'
+        chat_id: CHANNEL_ID,
+        photo: CHART_IMAGE,
+        caption,
+        parse_mode: 'HTML',
       }),
+    }
+  );
+
+  return res.json();
+}
+
+async function sendMessage(text: string) {
+  const res = await fetch(
+    `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        chat_id: CHANNEL_ID,
+        text,
+        parse_mode: 'HTML',
+        disable_web_page_preview: true,
+      }),
+    }
+  );
+
+  return res.json();
+}
+
+export default async function handler(
+  req: VercelRequest,
+  res: VercelResponse
+) {
+  try {
+    const btcPrice = await getBTCPrice();
+
+    const news = await getLatestNews();
+
+    const translatedTitle = await translateToTurkish(news.title);
+
+    const translatedBody = await translateToTurkish(
+      news.body.slice(0, 400)
+    );
+
+    const priceFormatted = btcPrice.toLocaleString('tr-TR', {
+      maximumFractionDigits: 0,
     });
 
-    const result = await telegramRes.json();
-    
-    // Eğer resim gönderiminde bir problem çıkarsa sistemi patlatma, düz metin olarak ilet (Yedek Plan)
-    if (!result.ok) {
-      console.warn("Resim gönderilemedi, düz metne dönülüyor:", result.description);
-      
-      const fallbackRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: TARGET_CHANNEL,
-          text: captionMessage.trim(),
-          parse_mode: 'HTML',
-          disable_web_page_preview: true
-        }),
-      });
-      const fallbackResult = await fallbackRes.json();
-      if (fallbackResult.ok) {
-        return res.status(200).json({ success: true, message: "Yedek plan (Düz metin) gönderildi." });
+    const bulletin = [
+      '🚀 <b>BTC GÜNLÜK PİYASA BÜLTENİ</b>',
+      '',
+      `💰 <b>BTC Fiyatı:</b> <code>$${priceFormatted}</code>`,
+      '',
+      '📊 <b>Son Gelişme</b>',
+      `${escapeHtml(translatedTitle)}`,
+      '',
+      `<i>${escapeHtml(translatedBody)}</i>`,
+      '',
+      '📈 <b>Piyasa Takibi Devam Ediyor</b>',
+      '',
+      '━━━━━━━━━━━━',
+      '',
+      '📞 <b>İletişim</b>',
+      '@barbieanaliz',
+    ].join('\n');
+
+    try {
+      const photoResult = await sendPhoto(bulletin);
+
+      if (!photoResult.ok) {
+        throw new Error(
+          photoResult.description || 'sendPhoto failed'
+        );
       }
-      return res.status(400).json({ success: false, error: fallbackResult.description });
+
+      return res.status(200).json({
+        success: true,
+        method: 'sendPhoto',
+        result: photoResult,
+      });
+    } catch (photoError) {
+      console.error('sendPhoto failed:', photoError);
+
+      const fallback = await sendMessage(bulletin);
+
+      return res.status(200).json({
+        success: true,
+        method: 'fallback-sendMessage',
+        result: fallback,
+      });
     }
-
-    return res.status(200).json({ success: true });
-
   } catch (error: any) {
-    return res.status(500).json({ error: error.message || 'Sistem hatası.' });
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      error: error?.message || 'Unknown error',
+    });
   }
 }
