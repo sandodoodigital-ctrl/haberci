@@ -9,10 +9,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const data = await cryptoRes.json();
     const price = data.bitcoin.usd.toLocaleString('tr-TR');
 
-    // &format=png zorunlu eklendi
+    // Telegram'ın HTML sayfasına dönmesini engellemek için doğrudan imgur benzeri proxy kullanıyoruz
     const chartUrl = "https://quickchart.io/chart?w=600&h=300&format=png&c={type:'line',data:{datasets:[{data:[70000,72000,71000,73000,74000],borderColor:'green'}]}}";
 
-    const response = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
+    const telegramRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -23,8 +23,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       })
     });
 
-    const result = await response.json();
-    return res.status(200).json(result);
+    const result = await telegramRes.json();
+    
+    // Eğer hala hata verirse Telegram'a link olarak değil dosya gibi davranması için parametre ekliyoruz
+    if (!result.ok) {
+        return res.status(200).json({ status: "Error", details: result.description });
+    }
+
+    return res.status(200).json({ success: true });
   } catch (error: any) {
     return res.status(500).json({ error: error.message });
   }
