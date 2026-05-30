@@ -19,11 +19,12 @@ function App() {
       const priceData = await priceRes.json();
       setBtcData({
         price: Math.round(parseFloat(priceData.price) * 100) / 100,
-        info: 'Sistem her sabah 10:00\'da dünya kripto haberlerini otomatik çeker, Türkçeye çevirir ve görsel analiz raporu olarak paylaşır.'
+        info: "Sistem her sabah 10:00'da dünya kripto haberlerini otomatik çeker, Türkçeye çevirir ve görsel analiz raporu olarak paylaşır."
       });
     } catch (err) {
       console.error(err);
-    } finalNewsTitle {
+    } // HATA BURADAYDI, TAMAMEN DÜZELTİLDİ:
+    finally {
       setLoading(false);
     }
   }, []);
@@ -36,7 +37,7 @@ function App() {
     setSending(true);
     setSent(false);
     try {
-      // Doğrudan backend API rotamızı tetikliyoruz, bütün resmi çekme ve TG'ye gönderme işini o yapıyor
+      // Arka plandaki resimli çalışan backend API'mizi tetikliyoruz
       const res = await fetch('/api/btc-analysis', { method: 'POST' });
       const result = await res.json();
 
