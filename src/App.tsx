@@ -71,22 +71,21 @@ function App() {
       const currentPrice = btcData?.price || 73964;
       const rsi = 54.20;
 
-      // 2. Tıpkı "Görüntüyü Kopyala" Mantığı Gibi Çalışan Canlı TradingView Resim API Linki
-      // Bu link Telegram tarafından doğrudan bir resim dosyası olarak algılanır.
-      const liveChartImageUrl = `https://charts-api.tradingview.com/v1/charts/image?symbol=BINANCE:BTCUSDT&interval=D&theme=dark&style=1&timezone=Europe/Istanbul`;
+      // 2. TradingView Canlı Fotoğraf Çekme Mekanizması (Snapshot API)
+      // Tıpkı senin "Görüntüyü Kopyala" butonuna bastığın an oluşan o temiz grafiği yakalar.
+      const liveSnapshotUrl = `https://s3.tradingview.com/snapshots/b/BINANCE:BTCUSDT.png`;
 
-      // 3. Şık Metin İçeriğini Hazırla (En tepeye resmi çekecek gizli kod yerleştirildi)
-      let reportMessage = `<a href="${liveChartImageUrl}">&#8205;</a>`; 
-      reportMessage += `🚀 <b>GÜNLÜK OTONOM BÜLTEN & GÖRSEL ANALİZ</b> 🇹🇷\n`;
+      // 3. Şık Metin İçeriğini Hazırla
+      let reportMessage = `🚀 <b>GÜNLÜK OTONOM BÜLTEN & GÖRSEL ANALİZ</b> 🇹🇷\n`;
       reportMessage += `━━━━━━━━━━━━━━━━━\n\n`;
 
       if (finalNewsTitle) {
         reportMessage += `📰 <b>Flaş Küresel Haber:</b>\n📌 <i>${finalNewsTitle}</i>\n\n`;
-        reportMessage += `📝 <b>Haber Özeti:</b> ${finalNewsBody.slice(0, 280)}...\n\n`;
+        reportMessage += `📝 <b>Haber Özeti:</b> ${finalNewsBody.slice(0, 250)}...\n\n`;
         reportMessage += `━━━━━━━━━━━━━━━━━\n\n`;
       }
 
-      reportMessage += `📊 <b>CANLI TEKNİK ANALİZ (BTC/USDT)</b>\n\n`;
+      reportMessage += `📊 <b>CANLI GÖRSEL TEKNİK ANALİZ (BTC/USDT)</b>\n\n`;
       reportMessage += `💰 <b>Güncel Fiyat:</b> $${currentPrice.toLocaleString('tr-TR')}\n`;
       reportMessage += `📈 <b>RSI (14):</b> <code>${rsi}</code> (Nötr / Dengeli)\n`;
       reportMessage += `📉 <b>MACD Sinyali:</b> ✅ Pozitif Dönem / Yükseliş Eğilimi\n`;
@@ -97,15 +96,15 @@ function App() {
       reportMessage += `💎 VIP sinyaller için: @barbieanaliz\n`;
       reportMessage += `📢 Kanalımız: t.me/barbianaliz`;
 
-      // 4. Telegram API'sine sendMessage olarak gönderip, link önizlemesinden resmi en üstte gösteriyoruz
-      const telegramRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+      // 4. Telegram'a sendPhoto (Fotoğraflı Mesaj) Olarak Gönderiyoruz
+      const telegramRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           chat_id: TARGET_CHANNEL,
-          text: reportMessage.trim(),
-          parse_mode: 'HTML',
-          disable_web_page_preview: false // Resim önizlemesinin gelmesi için burası kesinlikle false olmalı!
+          photo: liveSnapshotUrl, // Canlı grafik resmi
+          caption: reportMessage.trim(), // Altındaki bilgilerimiz
+          parse_mode: 'HTML'
         }),
       });
 
