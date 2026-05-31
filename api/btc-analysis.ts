@@ -101,7 +101,7 @@ function calculateMACD(closes: number[]): { macd: number; signal: number; histog
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8784838463:AAGrZu_RlxzqWWicryIAk_l9Q51FwhJfIDw';
-  const TARGET_CHANNEL = process.env.TELEGRAM_CHANNEL || '@barbianaliz';
+  const TARGET_CHANNEL = process.env.TELEGRAM_CHANNEL || '@barbi_iletisim_bot';
 
   try {
     // Ülke veya IP engellerini (Vercel sunucu lokasyonundan kaynaklı) aşmak için alternatif yedek api.binance.us ve api1, api2, api3 uç noktaları listesi
