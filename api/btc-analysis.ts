@@ -105,11 +105,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     // Ülke veya IP engellerini aşmak için alternatif yedek api uç noktaları listesi
     const endpoints = [
-      'https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&limit=100',
-      'https://api1.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&limit=100',
-      'https://api2.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&limit=100',
-      'https://api3.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&limit=100',
-      'https://api.binance.us/api/v3/klines?symbol=BTCUSDT&interval=1d&limit=100'
+      'https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=4h&limit=100',
+      'https://api1.binance.com/api/v3/klines?symbol=BTCUSDT&interval=4h&limit=100',
+      'https://api2.binance.com/api/v3/klines?symbol=BTCUSDT&interval=4h&limit=100',
+      'https://api3.binance.com/api/v3/klines?symbol=BTCUSDT&interval=4h&limit=100',
+      'https://api.binance.us/api/v3/klines?symbol=BTCUSDT&interval=4h&limit=100'
     ];
 
     let binanceRes: any = null;
@@ -180,7 +180,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // 3. QuickChart Hatasız Kırmızı-Yeşil Mum Grafik Konfigürasyonu
-    const chartLabels = candles.map((c, i) => i % 15 === 0 ? new Date(c.openTime).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' }) : '');
+const chartLabels = candles.map((c, i) => i % 15 === 0 ? new Date(c.openTime).toLocaleString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '');
     
     // Mum gövdesini (Açılış ve Kapanış arası) alt ve üst sınır olarak hesaplıyoruz
     const barData = candles.map(c => [c.open, c.close]);
@@ -203,7 +203,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       options: {
         title: {
           display: true,
-          text: 'Bitcoin (BTC) Günlük Değişim Grafiği',
+           text: 'Bitcoin (BTC) 4 Saatlik Mum Grafiği',
           fontSize: 16,
           fontColor: '#ffffff'
         },
@@ -227,7 +227,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const chartUrl = `https://quickchart.io/chart?w=800&h=400&c=${encodeURIComponent(JSON.stringify(chartConfig))}`;
 
     // 4. Telegram Mesaj Metni Formatlama
-    const captionText = `🚀 <b>BTC GÜNLÜK TEKNİK ANALİZ</b>
+    const captionText = `🚀 <b>BTC 4 SAATLİK TEKNİK ANALİZ</b>
 
 💰 <b>Güncel BTC Fiyatı:</b> $${escapeHtml(currentPrice.toLocaleString('en-US'))}
 📊 <b>RSI (14):</b> ${escapeHtml(rsiValue.toFixed(2))}
