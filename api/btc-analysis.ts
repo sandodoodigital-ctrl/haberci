@@ -227,9 +227,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
 ━━━━━━━━━━━━
 📞 <b>İletişim:</b>
-@barbieanaliz
+@barbi_iletisim_bot
 🔐 <b>VIP Analiz Grubu:</b>
-@barbieanaliz`;
+@barbi_iletisim_bot`;
 
     // 5. Telegram'a Gönderme (sendPhoto, hata durumunda sendMessage Fallback)
     let telegramRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
