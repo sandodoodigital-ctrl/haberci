@@ -236,7 +236,7 @@ const chartLabels = candles.map((c, i) => i % 15 === 0 ? new Date(c.openTime).to
 🎯 <b>Destek Seviyesi:</b> $${escapeHtml(support1.toFixed(2))}
 🚀 <b>Direnç Seviyesi:</b> $${escapeHtml(resistance1.toFixed(2))}
 
-⚠️ <i>YASAL UYARI: Bu analiz ve sinyaller yatırım tavsiyesi içermez, tamamen bilgi amaçlıdır.</i>`;
+💰  <i> Hemen yerinizi ayırtmak ve gruba katılmak için buradan iletişime geçin.</i>`;
 
     // --- Telegram Yerel Buton Konfigürasyonu ---
     const inlineKeyboard = {
