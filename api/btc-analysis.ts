@@ -100,17 +100,55 @@ function calculateMACD(closes: number[]): { macd: number; signal: number; histog
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Ortam değişkenlerinden veya fallback olarak doğrudan kod içindeki tanımlardan verileri güvenli şekilde alıyoruz
   const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8784838463:AAGrZu_RlxzqWWicryIAk_l9Q51FwhJfIDw';
   const TARGET_CHANNEL = process.env.TELEGRAM_CHANNEL || '@barbianaliz';
 
   try {
-    // 1. Binance API'den Günlük (1d) Son 100 Mum Verisini Çekme
-    const binanceRes = await fetch('https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&limit=100');
-    if (!binanceRes.ok) throw new Error('Binance API response error');
-    
-    const rawData = await binanceRes.json();
-    
+    // Ülke veya IP engellerini (Vercel sunucu lokasyonundan kaynaklı) aşmak için alternatif yedek api.binance.us ve api1, api2, api3 uç noktaları listesi
+    const endpoints = [
+      'https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&limit=100',
+      'https://api1.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&limit=100',
+      'https://api2.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&limit=100',
+      'https://api3.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&limit=100',
+      'https://api.binance.us/api/v3/klines?symbol=BTCUSDT&interval=1d&limit=100'
+    ];
+
+    let binanceRes: any = null;
+    let rawData: any = null;
+
+    // Sırayla çalışan bir uç nokta bulana kadar döngü kuruyoruz
+    for (const url of endpoints) {
+      try {
+        binanceRes = await fetch(url, { signal: AbortSignal.timeout(5000) });
+        if (binanceRes.ok) {
+          rawData = await binanceRes.json();
+          if (Array.isArray(rawData) && rawData.length > 0) {
+            break;
+          }
+        }
+      } catch (e) {
+        continue;
+      }
+    }
+
+    // Eğer tüm alternatifler başarısız olduysa Coingecko verisiyle fallback (yedek) mekanizması çalıştır
+    if (!rawData) {
+      try {
+        const fallbackRes = await fetch('https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=100&interval=daily');
+        if (fallbackRes.ok) {
+          const geckoData = await fallbackRes.json();
+          // Grafik ve teknik analiz için fiyat dizisi oluşturma
+          const geckoPrices: [number, number][] = geckoData.prices;
+          rawData = geckoPrices.map((p, idx) => {
+            const open = idx > 0 ? geckoPrices[idx - 1][1] : p[1];
+            return [p[0], open, p[1] * 1.01, p[1] * 0.99, p[1], 100];
+          });
+        }
+      } catch (geckoError) {
+        throw new Error('Hem Binance API uç noktaları hem de yedek Coingecko servisi yanıt vermiyor.');
+      }
+    }
+
     const candles: BinanceCandle[] = rawData.map((d: any) => ({
       openTime: d[0],
       open: parseFloat(d[1]),
@@ -128,13 +166,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const rsiValue = calculateRSI(closes, 14);
     const macdData = calculateMACD(closes);
 
-    // Pivot Noktaları ile Destek ve Direnç Hesaplama (Klasik Pivot)
+    // Pivot Noktaları ile Destek ve Direnç Hesaplama
     const prevCandle = candles[candles.length - 2];
     const pivot = (prevCandle.high + prevCandle.low + prevCandle.close) / 3;
     const support1 = 2 * pivot - prevCandle.high;
     const resistance1 = 2 * pivot - prevCandle.low;
 
-    // Trend Yorumu Belirleme (Sinyal ve Al-Sat Tavsiyesi İçermez)
+    // Trend Yorumu Belirleme
     let trendComment = "Yatay Seviye Görünümü";
     if (rsiValue > 60 && macdData.histogram > 0) {
       trendComment = "Pozitif / Yukarı Yönlü Eğilim";
@@ -142,7 +180,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       trendComment = "Negatif / Aşağı Yönlü Eğilim";
     }
 
-    // 3. QuickChart Konfigürasyonu (Son 100 Mum Fiyat Verisi)
+    // 3. QuickChart Konfigürasyonu
     const chartLabels = candles.map((c, i) => i % 15 === 0 ? new Date(c.openTime).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' }) : '');
     
     const chartConfig = {
@@ -177,7 +215,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const chartUrl = `https://quickchart.io/chart?w=800&h=400&c=${encodeURIComponent(JSON.stringify(chartConfig))}`;
 
-    // 4. Telegram Mesaj Metni Formatlama (App.tsx dosyasındaki success kontrolü ile tam uyumlu olması için nesneye success: true eklenmiştir)
+    // 4. Telegram Mesaj Metni Formatlama
     const captionText = `🚀 <b>BTC GÜNLÜK TEKNİK ANALİZ</b>
 
 💰 <b>Güncel BTC Fiyatı:</b> $${escapeHtml(currentPrice.toLocaleString('en-US'))}
@@ -207,7 +245,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     let result = await telegramRes.json();
 
-    // Grafik gönderilemezse metin olarak göndermeyi dene
     if (!result.ok) {
       telegramRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
         method: 'POST',
@@ -221,7 +258,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       result = await telegramRes.json();
     }
 
-    // Hem başarılı sonucu dönüyoruz hem de App.tsx'teki 'data.success' kontrolünün tetiklenmesini sağlıyoruz
     if (result.ok) {
       return res.status(200).json({ success: true, ...result });
     } else {
