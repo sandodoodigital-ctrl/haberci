@@ -1,7 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 
-
 interface BinanceCandle {
 
   openTime: number;
@@ -449,20 +448,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 🎯 <b>Destek Seviyesi:</b> $${escapeHtml(support1.toFixed(2))}
 
 🚀 <b>Direnç Seviyesi:</b> $${escapeHtml(resistance1.toFixed(2))}
-
-
-
 ━━━━━━━━━━━━
-
 📞 <b>İletişim:</b>
-
 @barbieanaliz
 
 🔐 <b>VIP Analiz Grubu:</b>
-
 @barbieanaliz`;
-
-
 
     // 5. Telegram'a Gönderme (sendPhoto, hata durumunda sendMessage Fallback)
 
