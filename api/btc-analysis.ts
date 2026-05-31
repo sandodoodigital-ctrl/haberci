@@ -83,11 +83,8 @@ function calculateMACD(closes: number[]): { macd: number; signal: number; histog
     macdLine.push(ema12[i] - ema26[i]);
   }
   
-  // Sinyal çizgisi için geçersiz (0 olan) elemanları kırpıp hesaplıyoruz
   const validMacd = macdLine.slice(25);
   const signalLineRaw = calculateEMA(validMacd, 9);
-  
-  // Dizi boyutlarını eşitleme
   const signalLine = new Array(25).fill(0).concat(signalLineRaw);
   
   const lastIndex = closes.length - 1;
@@ -103,12 +100,9 @@ function calculateMACD(closes: number[]): { macd: number; signal: number; histog
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+  // Ortam değişkenlerinden veya fallback olarak doğrudan kod içindeki tanımlardan verileri güvenli şekilde alıyoruz
+  const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8784838463:AAGrZu_RlxzqWWicryIAk_l9Q51FwhJfIDw';
   const TARGET_CHANNEL = process.env.TELEGRAM_CHANNEL || '@barbianaliz';
-
-  if (!BOT_TOKEN) {
-    return res.status(500).json({ error: 'TELEGRAM_BOT_TOKEN is missing in environment variables.' });
-  }
 
   try {
     // 1. Binance API'den Günlük (1d) Son 100 Mum Verisini Çekme
@@ -140,7 +134,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const support1 = 2 * pivot - prevCandle.high;
     const resistance1 = 2 * pivot - prevCandle.low;
 
-    // Trend Yorumu Belirleme
+    // Trend Yorumu Belirleme (Sinyal ve Al-Sat Tavsiyesi İçermez)
     let trendComment = "Yatay Seviye Görünümü";
     if (rsiValue > 60 && macdData.histogram > 0) {
       trendComment = "Pozitif / Yukarı Yönlü Eğilim";
@@ -183,7 +177,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const chartUrl = `https://quickchart.io/chart?w=800&h=400&c=${encodeURIComponent(JSON.stringify(chartConfig))}`;
 
-    // 4. Telegram Mesaj Metni Formatlama
+    // 4. Telegram Mesaj Metni Formatlama (App.tsx dosyasındaki success kontrolü ile tam uyumlu olması için nesneye success: true eklenmiştir)
     const captionText = `🚀 <b>BTC GÜNLÜK TEKNİK ANALİZ</b>
 
 💰 <b>Güncel BTC Fiyatı:</b> $${escapeHtml(currentPrice.toLocaleString('en-US'))}
@@ -227,9 +221,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       result = await telegramRes.json();
     }
 
-    return res.status(200).json(result);
+    // Hem başarılı sonucu dönüyoruz hem de App.tsx'teki 'data.success' kontrolünün tetiklenmesini sağlıyoruz
+    if (result.ok) {
+      return res.status(200).json({ success: true, ...result });
+    } else {
+      return res.status(200).json({ success: false, error: result.description || 'Telegram API Error' });
+    }
 
   } catch (error: any) {
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ success: false, error: error.message });
   }
 }
