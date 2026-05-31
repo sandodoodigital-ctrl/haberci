@@ -179,27 +179,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       trendComment = "Negatif / Aşağı Yönlü Eğilim";
     }
 
-    // 3. QuickChart Konfigürasyonu
+    // 3. QuickChart Mum Grafiği (Candlestick) Konfigürasyonu
     const chartLabels = candles.map((c, i) => i % 15 === 0 ? new Date(c.openTime).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' }) : '');
     
+    // QuickChart formatına uygun Open, High, Low, Close veri paketi
+    const candleData = candles.map(c => ({
+      o: c.open,
+      h: c.high,
+      l: c.low,
+      c: c.close
+    }));
+
     const chartConfig = {
-      type: 'line',
+      type: 'candlestick', // Çizgiden profesyonel finansal MUM grafiğine geçiş yapıldı
       data: {
         labels: chartLabels,
         datasets: [{
-          label: 'BTC/USDT Günlük Kapanış',
-          data: closes,
-          borderColor: '#f2a900',
-          backgroundColor: 'rgba(242, 169, 0, 0.1)',
-          borderWidth: 2,
-          pointRadius: 0,
-          fill: true
+          label: 'BTC/USDT Günlük Mumlar',
+          data: candleData,
+          // Mumların TradingView tarzı kırmızı ve yeşil renk ayarları
+          color: {
+            up: '#089981',    // Yükselen mum rengi (Yeşil)
+            down: '#f23645',  // Düşen mum rengi (Kırmızı)
+            unchanged: '#aaaaaa'
+          }
         }]
       },
       options: {
         title: {
           display: true,
-          text: 'Bitcoin (BTC) Günlük Değişim Grafiği',
+          text: 'Bitcoin (BTC) Günlük Mum Grafiği',
           fontSize: 16,
           fontColor: '#ffffff'
         },
@@ -208,13 +217,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           xAxes: [{ gridLines: { color: 'rgba(255, 255, 255, 0.1)' }, ticks: { fontColor: '#aaaaaa' } }],
           yAxes: [{ gridLines: { color: 'rgba(255, 255, 255, 0.1)' }, ticks: { fontColor: '#aaaaaa' } }]
         },
-        backgroundColor: '#131722'
+        backgroundColor: '#131722' // Arka plan TradingView koyu teması
       }
     };
 
     const chartUrl = `https://quickchart.io/chart?w=800&h=400&c=${encodeURIComponent(JSON.stringify(chartConfig))}`;
 
-    // 4. Telegram Mesaj Metni Formatlama (Temizlendi & Yasal Uyarı Eklendi)
+    // 4. Telegram Mesaj Metni Formatlama (Yasal Uyarı Eklendi)
     const captionText = `🚀 <b>BTC GÜNLÜK TEKNİK ANALİZ</b>
 
 💰 <b>Güncel BTC Fiyatı:</b> $${escapeHtml(currentPrice.toLocaleString('en-US'))}
@@ -224,9 +233,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 🎯 <b>Destek Seviyesi:</b> $${escapeHtml(support1.toFixed(2))}
 🚀 <b>Direnç Seviyesi:</b> $${escapeHtml(resistance1.toFixed(2))}
 
-💰 <i>Hemen yerinizi ayırtmak ve gruba katılmak için buradan iletişime geçin</i>`;
+⚠️ <i>YASAL UYARI: Bu analiz ve sinyaller yatırım tavsiyesi içermez, tamamen bilgi amaçlıdır.</i>`;
 
-    // --- Telegram Yerel Buton Konfigürasyonu ---
+    // --- Telegram Şık Buton Konfigürasyonu ---
     const inlineKeyboard = {
       inline_keyboard: [
         [
@@ -238,7 +247,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ]
     };
 
-    // 5. Telegram'a Gönderme (sendPhoto - Butonlar Tanımlandı)
+    // 5. Telegram'a Gönderme (sendPhoto - Grafik ve Butonlar Bağlandı)
     let telegramRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -247,7 +256,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         photo: chartUrl,
         caption: captionText,
         parse_mode: 'HTML',
-        reply_markup: inlineKeyboard // Sihirli butonlar buraya bağlandı
+        reply_markup: inlineKeyboard // Butonlar mesaja giydirildi
       })
     });
 
@@ -262,7 +271,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           chat_id: TARGET_CHANNEL,
           text: captionText,
           parse_mode: 'HTML',
-          reply_markup: inlineKeyboard // Butonlar yedek mesaja da eklendi
+          reply_markup: inlineKeyboard // Yedek mesaja da butonlar eklendi
         })
       });
       result = await telegramRes.json();
